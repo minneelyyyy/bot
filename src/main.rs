@@ -27,30 +27,30 @@ fn get_dox_output(ctx: &mut Context<'_>, user: &serenity::User, member: Option<&
 
     let mut output = String::new();
 
-    output.push_str(&format!("User ID: {}\n", user.id));
+    output.push_str(&format!("**User ID**: {}\n", user.id));
 
     if let Some(locale) = &user.locale {
-        output.push_str(&format!("Locale: {locale}\n"));
+        output.push_str(&format!("**Locale**: {locale}\n"));
     }
 
     if let Some(verified) = &user.verified {
-        output.push_str(&format!("Verified: {verified}\n"));
+        output.push_str(&format!("**Verified**: {verified}\n"));
     }
 
-    output.push_str(&format!("Account Created: {}\n", user.created_at()));
+    output.push_str(&format!("**Account Created**: {}\n", user.created_at()));
 
     if let Some(Some(join_date)) = member.as_ref().map(|m| m.joined_at) {
-        output.push_str(&format!("Joined this Server at: {join_date}\n"));
+        output.push_str(&format!("**Joined this Server at**: {join_date}\n"));
     }
 
     if let Some(Some(premium_since)) = member.as_ref().map(|m| m.premium_since) {
-        output.push_str(&format!("Boosting this Server: Yes\nBoosting since: {premium_since}\n"));
+        output.push_str(&format!("**Boosting this Server**: Yes\n**Boosting since**: {premium_since}\n"));
     }
 
     if show_permissions {
         if let Some(member) = member {
             if let Ok(permissions) = member.permissions(ctx) {
-                output.push_str(&format!("Permissions: {}\n", permissions.get_permission_names().join(", ")))
+                output.push_str(&format!("**Permissions**: {}\n", permissions.get_permission_names().join(", ")))
             }
         }
     }   
