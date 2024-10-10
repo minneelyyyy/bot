@@ -24,6 +24,8 @@ async fn ping(ctx: Context<'_>) -> Result<(), Error> {
 async fn main() -> Result<(), Error> {
     dotenv::dotenv().ok();
 
+    println!("Starting bot...");
+
     let token = env::var("DISCORD_BOT_TOKEN")?;
     let intents = serenity::GatewayIntents::non_privileged();
 
