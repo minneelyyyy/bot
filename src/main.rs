@@ -92,7 +92,7 @@ async fn dox(
 #[poise::command(slash_command)]
 async fn yeehaw(ctx: Context<'_>, count: Option<u8>) -> Result<(), Error> {
     ctx.reply(iter::repeat("\u{1F920}")
-        .take(count.unwrap_or(0) as usize)
+        .take(count.unwrap_or(1) as usize)
         .collect::<Vec<&str>>()
         .join("\n")).await?;
     Ok(())
