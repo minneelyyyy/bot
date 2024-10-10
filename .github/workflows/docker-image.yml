@@ -1,0 +1,36 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build_amd64: 
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+    - uses: actions/checkout@v4
+    - name: Build and push the Docker image
+      run: docker build . --push --file Dockerfile --tag ${{ secrets.DOCKERHUB_USERNAME }}/my-image-name:$(date +%s)
+
+  build_arm64: 
+    runs-on: self-hosted
+
+    steps:
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+    - uses: actions/checkout@v4
+    - name: Build and push the Docker image
+      run: docker build . --push --file Dockerfile --tag ${{ secrets.DOCKERHUB_USERNAME }}/my-image-name:$(date +%s)
