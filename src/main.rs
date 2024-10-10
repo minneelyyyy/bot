@@ -1,4 +1,5 @@
 use std::env;
+use std::iter;
 use poise::{serenity_prelude::{self as serenity, Colour}, CreateReply};
 
 struct Data {}
@@ -87,6 +88,16 @@ async fn dox(
     Ok(())
 }
 
+/// Pardner
+#[poise::command(slash_command)]
+async fn yeehaw(ctx: Context<'_>, count: Option<u8>) -> Result<(), Error> {
+    ctx.reply(iter::repeat("\u{1F920}")
+        .take(count.unwrap_or(0) as usize)
+        .collect::<Vec<&str>>()
+        .join("\n")).await?;
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     dotenv::dotenv().ok();
@@ -96,7 +107,7 @@ async fn main() -> Result<(), Error> {
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![ping(), dox()],
+            commands: vec![ping(), dox(), yeehaw()],
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {
