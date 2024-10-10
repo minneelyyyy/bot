@@ -1,5 +1,3 @@
-#![feature(async_closure)]
-
 use std::env;
 use poise::{serenity_prelude::{self as serenity, Colour}, CreateReply};
 
