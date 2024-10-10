@@ -1,4 +1,4 @@
-FROM rustlang/rust:nightly AS builder
+FROM rust:1.81 AS builder
 WORKDIR /usr/src/bot
 COPY . .
 
