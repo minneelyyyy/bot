@@ -13,20 +13,24 @@ async fn ping(ctx: Context<'_>) -> Result<(), Error> {
 
     let start = Instant::now();
     let msg = ctx.say("Pong! \u{1F3D3}").await?;
+    let time = start.elapsed();
 
     msg.edit(ctx, poise::reply::CreateReply::default()
         .content(format!("Pong! \u{1F3D3}\nREST: {:.2?}\nGateway: {:.2?}",
-            start.elapsed(), ctx.ping().await))).await?;
+            time, ctx.ping().await))).await?;
 
     Ok(())
 }
 
-fn get_dox_output(ctx: &mut Context<'_>, user: &serenity::User, member: Option<&serenity::Member>, show_permissions: bool) -> String {
-    if user.bot {
-        return "This user is a bot.".into();
-    }
-
+fn get_dox_output(ctx: &mut Context<'_>,
+        user: &serenity::User,
+        member: Option<&serenity::Member>,
+        show_permissions: bool) -> String {
     let mut output = String::new();
+
+    if user.bot {
+        output.push_str("This user is a bot.\n");
+    }
 
     output.push_str(&format!("**User ID**: {}\n", user.id));
 
@@ -45,15 +49,12 @@ fn get_dox_output(ctx: &mut Context<'_>, user: &serenity::User, member: Option<&
     }
 
     if let Some(Some(premium_since)) = member.as_ref().map(|m| m.premium_since) {
-        output.push_str(&format!("**Boosting this Server**: Yes\n**Boosting since**: {premium_since}\n"));
+        output.push_str(
+            &format!("**Boosting this Server**: Yes\n**Boosting since**: {premium_since}\n"));
     }
 
-    if show_permissions {
-        if let Some(member) = member {
-            if let Ok(permissions) = member.permissions(ctx) {
-                output.push_str(&format!("**Permissions**: {}\n", permissions.get_permission_names().join(", ")))
-            }
-        }
+    if let Some(Ok(permissions)) = member.map(|m| m.permissions(ctx)).filter(|_| show_permissions) {
+        output.push_str(&format!("**Permissions**: {}\n", permissions.get_permission_names().join(", ")))
     }   
 
     output
@@ -90,10 +91,16 @@ async fn dox(
 
 /// Pardner
 #[poise::command(slash_command)]
-async fn yeehaw(ctx: Context<'_>, count: Option<u8>) -> Result<(), Error> {
-    ctx.reply(iter::repeat("\u{1F920}")
-        .take(count.unwrap_or(1) as usize)
-        .collect::<Vec<&str>>()
+async fn yeehaw(ctx: Context<'_>,
+        #[min = 1]
+        #[max = 64]
+        width: usize,
+        #[min = 1]
+        #[max = 100]
+        height: usize) -> Result<(), Error> {
+    ctx.reply(iter::repeat("\u{1F920}".to_string().repeat(width))
+        .take(height)
+        .collect::<Vec<String>>()
         .join("\n")).await?;
     Ok(())
 }
