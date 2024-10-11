@@ -1,8 +1,12 @@
 use std::env;
 use std::iter;
+use tokio::sync::Mutex;
 use poise::{serenity_prelude::{self as serenity, Colour}, CreateReply};
 
-struct Data {}
+struct Data {
+    tokens: Mutex<usize>,
+}
+
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
 
@@ -100,8 +104,35 @@ async fn yeehaw(ctx: Context<'_>,
         height: usize) -> Result<(), Error> {
     ctx.reply(iter::repeat("\u{1F920}".to_string().repeat(width))
         .take(height)
-        .collect::<Vec<String>>()
+        .collect::<Vec<_>>()
         .join("\n")).await?;
+    Ok(())
+}
+
+#[poise::command(slash_command)]
+async fn wager(ctx: Context<'_>, amount: usize) -> Result<(), Error> {
+    let mut wealth = ctx.data().tokens.lock().await;
+
+    if *wealth < amount {
+        ctx.reply("You do not have enough tokens to wager this amount.").await?;
+        return Ok(());
+    }
+
+    if rand::random() {
+        *wealth += amount;
+        ctx.reply(format!("You just gained {} tokens! You now have **{}**.", amount, *wealth)).await?;
+    } else {
+        *wealth -= amount;
+        ctx.reply(format!("You've lost **{}** tokens, you now have **{}**.", amount, *wealth)).await?;
+    }
+
+    Ok(())
+}
+
+#[poise::command(slash_command)]
+async fn balance(ctx: Context<'_>) -> Result<(), Error> {
+    let wealth = ctx.data().tokens.lock().await;
+    ctx.reply(format!("You have **{}** tokens.", *wealth)).await?;
     Ok(())
 }
 
@@ -114,13 +145,13 @@ async fn main() -> Result<(), Error> {
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![ping(), dox(), yeehaw()],
+            commands: vec![ping(), dox(), yeehaw(), wager(), balance()],
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-                Ok(Data {})
+                Ok(Data { tokens: Mutex::new(100) })
             })
         })
         .build();
