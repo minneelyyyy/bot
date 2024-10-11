@@ -1,4 +1,3 @@
-use std::collections::btree_set::SymmetricDifference;
 use std::collections::HashMap;
 use std::env;
 use std::iter;
@@ -14,7 +13,7 @@ type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
 
 /// Display the bot's latency to Discord's REST and Gateway APIs
-#[poise::command(slash_command)]
+#[poise::command(slash_command, prefix_command)]
 async fn ping(ctx: Context<'_>) -> Result<(), Error> {
     use std::time::Instant;
 
@@ -68,7 +67,7 @@ fn get_dox_output(ctx: &mut Context<'_>,
 }
 
 /// Display information about a given user
-#[poise::command(slash_command)]
+#[poise::command(slash_command, prefix_command)]
 async fn dox(
         mut ctx: Context<'_>,
         #[description = "The user to display information of"]
@@ -97,7 +96,7 @@ async fn dox(
 }
 
 /// Pardner
-#[poise::command(slash_command)]
+#[poise::command(slash_command, prefix_command)]
 async fn yeehaw(ctx: Context<'_>,
         #[min = 1]
         #[max = 64]
@@ -120,7 +119,7 @@ fn get_user_wealth_mut(users: &mut HashMap<UserId, usize>, id: UserId) -> &mut u
     users.get_mut(&id).unwrap()
 }
 
-#[poise::command(slash_command)]
+#[poise::command(slash_command, prefix_command)]
 async fn wager(ctx: Context<'_>, amount: usize) -> Result<(), Error> {
     let mut users = ctx.data().users.lock().await;
 
@@ -133,33 +132,33 @@ async fn wager(ctx: Context<'_>, amount: usize) -> Result<(), Error> {
 
     if rand::random() {
         *wealth += amount;
-        ctx.reply(format!("You just gained {} tokens! You now have **{}**.", amount, *wealth)).await?;
+        ctx.reply(format!("You just gained {} token(s)! You now have **{}**.", amount, *wealth)).await?;
     } else {
         *wealth -= amount;
-        ctx.reply(format!("You've lost **{}** tokens, you now have **{}**.", amount, *wealth)).await?;
+        ctx.reply(format!("You've lost **{}** token(s), you now have **{}**.", amount, *wealth)).await?;
     }
 
     Ok(())
 }
 
-#[poise::command(slash_command)]
+#[poise::command(slash_command, prefix_command)]
 async fn give(ctx: Context<'_>, user: serenity::User, amount: usize) -> Result<(), Error> {
     if user.bot {
-        ctx.reply("Don't waste your tokens and give them to a bot!").await?;
+        ctx.reply("Don't waste your token(s) by giving them to a bot!").await?;
         return Ok(());
     }
 
     let mut users = ctx.data().users.lock().await;
 
     let author_wealth = get_user_wealth_mut(&mut users, ctx.author().id);
-    
+
     if *author_wealth < amount {
-        ctx.reply(format!("You only have **{}** tokens and cannot give away **{}**.", *author_wealth, amount)).await?;
+        ctx.reply(format!("You only have **{}** token(s) and cannot give away **{}**.", *author_wealth, amount)).await?;
         return Ok(());
     }
 
     *author_wealth -= amount;
-    
+
     let reciever_wealth = get_user_wealth_mut(&mut users, user.id);
 
     *reciever_wealth += amount;
@@ -169,14 +168,14 @@ async fn give(ctx: Context<'_>, user: serenity::User, amount: usize) -> Result<(
     Ok(())
 }
 
-#[poise::command(slash_command)]
+#[poise::command(slash_command, prefix_command)]
 async fn balance(ctx: Context<'_>, user: Option<serenity::User>) -> Result<(), Error> {
     let user = user.as_ref().unwrap_or(ctx.author());
     let mut users = ctx.data().users.lock().await;
 
     let wealth = get_user_wealth_mut(&mut users, user.id);
 
-    ctx.reply(format!("{} **{}** tokens.",
+    ctx.reply(format!("{} **{}** token(s).",
         if user.id == ctx.author().id {
             "You have".to_string()
         } else {
@@ -196,6 +195,12 @@ async fn main() -> Result<(), Error> {
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
             commands: vec![ping(), dox(), yeehaw(), wager(), balance(), give()],
+            prefix_options: poise::PrefixFrameworkOptions {
+                prefix: Some("%".into()),
+                edit_tracker: Some(Arc::new(poise::EditTracker::for_timespan(std::time::Duration::from_secs(3600)))),
+                case_insensitive_commands: true,
+                ..Default::default()
+            },
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {
