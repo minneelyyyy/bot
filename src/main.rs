@@ -98,14 +98,12 @@ async fn dox(
 /// Pardner
 #[poise::command(slash_command, prefix_command)]
 async fn yeehaw(ctx: Context<'_>,
-        #[min = 1]
-        #[max = 64]
-        width: usize,
-        #[min = 1]
-        #[max = 100]
-        height: usize) -> Result<(), Error> {
-    ctx.reply(iter::repeat("\u{1F920}".to_string().repeat(width))
-        .take(height)
+    #[min = 1]
+    width: Option<usize>,
+    #[min = 1]
+    height: Option<usize>) -> Result<(), Error> {
+    ctx.reply(iter::repeat("\u{1F920}".to_string().repeat(width.unwrap_or(1)))
+        .take(height.unwrap_or(1))
         .collect::<Vec<_>>()
         .join("\n")).await?;
     Ok(())
