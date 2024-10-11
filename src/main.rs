@@ -1,10 +1,13 @@
+use std::collections::btree_set::SymmetricDifference;
+use std::collections::HashMap;
 use std::env;
 use std::iter;
+use std::sync::Arc;
 use tokio::sync::Mutex;
-use poise::{serenity_prelude::{self as serenity, Colour}, CreateReply};
+use poise::{serenity_prelude::{self as serenity, Colour, UserId}, CreateReply};
 
 struct Data {
-    tokens: Mutex<usize>,
+    users: Arc<Mutex<HashMap<UserId, usize>>>
 }
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -109,9 +112,19 @@ async fn yeehaw(ctx: Context<'_>,
     Ok(())
 }
 
+fn get_user_wealth_mut(users: &mut HashMap<UserId, usize>, id: UserId) -> &mut usize {
+    if users.get(&id).is_none() {
+        users.insert(id, 100);
+    }
+
+    users.get_mut(&id).unwrap()
+}
+
 #[poise::command(slash_command)]
 async fn wager(ctx: Context<'_>, amount: usize) -> Result<(), Error> {
-    let mut wealth = ctx.data().tokens.lock().await;
+    let mut users = ctx.data().users.lock().await;
+
+    let wealth = get_user_wealth_mut(&mut users, ctx.author().id);
 
     if *wealth < amount {
         ctx.reply("You do not have enough tokens to wager this amount.").await?;
@@ -130,9 +143,46 @@ async fn wager(ctx: Context<'_>, amount: usize) -> Result<(), Error> {
 }
 
 #[poise::command(slash_command)]
-async fn balance(ctx: Context<'_>) -> Result<(), Error> {
-    let wealth = ctx.data().tokens.lock().await;
-    ctx.reply(format!("You have **{}** tokens.", *wealth)).await?;
+async fn give(ctx: Context<'_>, user: serenity::User, amount: usize) -> Result<(), Error> {
+    if user.bot {
+        ctx.reply("Don't waste your tokens and give them to a bot!").await?;
+        return Ok(());
+    }
+
+    let mut users = ctx.data().users.lock().await;
+
+    let author_wealth = get_user_wealth_mut(&mut users, ctx.author().id);
+    
+    if *author_wealth < amount {
+        ctx.reply(format!("You only have **{}** tokens and cannot give away **{}**.", *author_wealth, amount)).await?;
+        return Ok(());
+    }
+
+    *author_wealth -= amount;
+    
+    let reciever_wealth = get_user_wealth_mut(&mut users, user.id);
+
+    *reciever_wealth += amount;
+
+    ctx.reply(format!("You've given **{}** **{}** token(s).", user.name, amount)).await?;
+
+    Ok(())
+}
+
+#[poise::command(slash_command)]
+async fn balance(ctx: Context<'_>, user: Option<serenity::User>) -> Result<(), Error> {
+    let user = user.as_ref().unwrap_or(ctx.author());
+    let mut users = ctx.data().users.lock().await;
+
+    let wealth = get_user_wealth_mut(&mut users, user.id);
+
+    ctx.reply(format!("{} **{}** tokens.",
+        if user.id == ctx.author().id {
+            "You have".to_string()
+        } else {
+            format!("{} has", user.name)
+        }, *wealth)).await?;
+
     Ok(())
 }
 
@@ -145,13 +195,13 @@ async fn main() -> Result<(), Error> {
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![ping(), dox(), yeehaw(), wager(), balance()],
+            commands: vec![ping(), dox(), yeehaw(), wager(), balance(), give()],
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-                Ok(Data { tokens: Mutex::new(100) })
+                Ok(Data { users: Arc::new(Mutex::new(HashMap::new())) })
             })
         })
         .build();
