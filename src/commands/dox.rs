@@ -52,9 +52,11 @@ pub async fn dox(mut ctx: Context<'_>,
                  show_permissions: Option<bool>) -> Result<(), Error>
 {
     let user = ctx.http().get_user(user.id).await?;
-    let member = ctx.guild_id().map(
-        async move |guild|
-            guild.member(ctx.http(), user.id).await.ok()).unwrap();
+    let member = if let Some(guild) = ctx.guild_id() {
+        guild.member(ctx.http(), user.id).await.ok()
+    } else {
+        None
+    };
 
     let embed = serenity::CreateEmbed::default()
         .title(format!("Information about {}", user.name))
