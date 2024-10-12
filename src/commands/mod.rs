@@ -16,4 +16,3 @@ pub fn commands() -> Vec<Command<Data, Error>> {
         gambling::wager::wager(),
     ]
 }
-
