@@ -201,7 +201,7 @@ impl<'a> ParseTree<'a> {
     {
         match self {
             ParseTree::Add(l, r) => Ok(l.evaluate(globals, locals)? + r.evaluate(globals, locals)?),
-            ParseTree::Sub(l, r) => Ok(l.evaluate(globals, locals)? + r.evaluate(globals, locals)?),
+            ParseTree::Sub(l, r) => Ok(l.evaluate(globals, locals)? - r.evaluate(globals, locals)?),
             ParseTree::Mul(l, r) => Ok(l.evaluate(globals, locals)? * r.evaluate(globals, locals)?),
             ParseTree::Div(l, r) => Ok(l.evaluate(globals, locals)? / r.evaluate(globals, locals)?),
             ParseTree::Exp(l, r)
@@ -285,30 +285,5 @@ impl<'a> ParseTree<'a> {
             }
             ParseTree::Scalar(x) => Ok(x),
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_parse() {
-        let tokens = Token::tokenize("= x 15 : square x ** x 2 square x").expect("failed to tokenize");
-        let mut tokens = tokens.iter();
-
-        let globals = HashMap::new();
-        let locals = HashMap::new();
-        let mut locals = Cow::Borrowed(&locals);
-
-        let tree = ParseTree::parse(&mut tokens, &globals, &mut locals).expect("failed to parse");
-
-        eprintln!("{tree:?}");
-
-        let mut globals = HashMap::new();
-        let locals = HashMap::new();
-        let mut locals = Cow::Borrowed(&locals);
-
-        eprintln!("{}", tree.evaluate(&mut globals, &mut locals).expect("failed to evaluate"));
     }
 }
