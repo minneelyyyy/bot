@@ -2,6 +2,7 @@ use super::get_user_wealth_mut;
 use crate::common::{Context, Error};
 use poise::serenity_prelude as serenity;
 
+/// Tells you what your or someone else's balance is
 #[poise::command(slash_command, prefix_command)]
 pub async fn balance(ctx: Context<'_>, user: Option<serenity::User>) -> Result<(), Error> {
     let user = user.as_ref().unwrap_or(ctx.author());

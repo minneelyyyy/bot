@@ -1,6 +1,7 @@
 use crate::common::{Context, Error};
 use super::get_user_wealth_mut;
 
+/// Put forward an amount of tokens to either lose or earn
 #[poise::command(slash_command, prefix_command)]
 pub async fn wager(ctx: Context<'_>, amount: usize) -> Result<(), Error> {
     let mut users = ctx.data().users.lock().await;

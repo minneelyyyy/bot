@@ -2,6 +2,7 @@ use crate::{Context, Error};
 use super::get_user_wealth_mut;
 use poise::serenity_prelude as serenity;
 
+/// Generously donate your tokens to someone else
 #[poise::command(slash_command, prefix_command)]
 pub async fn give(ctx: Context<'_>, user: serenity::User, amount: usize) -> Result<(), Error> {
     if user.bot {
