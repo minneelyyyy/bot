@@ -63,8 +63,7 @@ pub async fn dox(mut ctx: Context<'_>,
         .title(format!("Information about {}", user.name))
         .description(get_dox_output(
             &mut ctx, &user, member.as_ref(), show_permissions.unwrap_or(false)))
-        .colour(member.map(|m| m.colour(ctx.cache()))
-            .unwrap_or(None)
+        .colour(member.and_then(|m| m.colour(ctx.cache()))
             .unwrap_or(user.accent_colour.unwrap_or(Colour::from_rgb(255, 255, 255))))
         .image(user.face());
 
