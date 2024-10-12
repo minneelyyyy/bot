@@ -9,13 +9,14 @@ pub async fn wager(ctx: Context<'_>, amount: usize) -> Result<(), Error> {
     let wealth = get_user_wealth_mut(&mut users, ctx.author().id);
 
     if *wealth < amount {
-        ctx.reply("You do not have enough tokens to wager this amount.").await?;
+        ctx.reply(format!("You do not have enough tokens (**{}**) to wager this amount.",
+                          *wealth)).await?;
         return Ok(());
     }
 
     if rand::random() {
         *wealth += amount;
-        ctx.reply(format!("You just gained {} token(s)! You now have **{}**.",
+        ctx.reply(format!("You just gained **{}** token(s)! You now have **{}**.",
                           amount, *wealth)).await?;
     } else {
         *wealth -= amount;
