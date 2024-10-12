@@ -6,7 +6,8 @@ use serenity::Colour;
 fn get_dox_output(ctx: &mut Context<'_>,
                   user: &serenity::User,
                   member: Option<&serenity::Member>,
-                  show_permissions: bool) -> String {
+                  show_permissions: bool) -> String
+{
     let mut output = String::new();
 
     if user.bot {
