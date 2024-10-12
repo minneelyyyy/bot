@@ -1,4 +1,5 @@
 use std::error;
+
 use crate::common::Error;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -10,6 +11,13 @@ pub enum Op {
     Mul,
     Div,
     Exp,
+    Equ,
+    LazyEqu,
+    GlobalEqu,
+    LazyGlobalEqu,
+    FunctionDeclare(usize),
+    Compose,
+    Id,
 }
 
 #[derive(Debug, Clone)]
@@ -43,44 +51,46 @@ impl Token {
         Token::Scalar(value)
     }
 
-    pub fn add() -> Token {
-        Token::Operator(Op::Add)
+    pub fn operator(op: Op) -> Token {
+        Token::Operator(op)
     }
-
-    pub fn sub() -> Token {
-        Token::Operator(Op::Sub)
-    }
-
-    pub fn mul() -> Token {
-        Token::Operator(Op::Mul)
-    }
-
-    pub fn div() -> Token {
-        Token::Operator(Op::Div)
-    }
-
-    pub fn exp() -> Token {
-        Token::Operator(Op::Exp)
-    }
-
     pub fn tokenize(s: &str) -> Result<Vec<Self>, Error> {
         s.split_whitespace().map(Token::from_str).collect()
     }
+}
+
+fn get_dot_count<I: Iterator<Item = char>>(s: I) -> usize {
+    s.fold(0, |acc, c| acc + match c {
+        ':' => 2,
+        '.' => 1,
+        _ => 0,
+    })
 }
 
 impl FromStr for Token {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
+        let s = if s.starts_with("\\") { s.chars().skip(1).collect() } else { s.to_string() };
+
+        match s.as_str() {
             // First check if s is an operator
-            "+"  => Ok(Token::add()),
-            "-"  => Ok(Token::sub()),
-            "*"  => Ok(Token::mul()),
-            "**" => Ok(Token::exp()),
-            "/"  => Ok(Token::div()),
+            "+"  => Ok(Token::operator(Op::Add)),
+            "-"  => Ok(Token::operator(Op::Sub)),
+            "*"  => Ok(Token::operator(Op::Mul)),
+            "**" => Ok(Token::operator(Op::Exp)),
+            "/"  => Ok(Token::operator(Op::Div)),
+            "="  => Ok(Token::operator(Op::Equ)),
+            "."  => Ok(Token::operator(Op::LazyEqu)),
+            "=>" => Ok(Token::operator(Op::GlobalEqu)),
+            ".>" => Ok(Token::operator(Op::LazyGlobalEqu)),
+            "~"  => Ok(Token::operator(Op::Compose)),
+            "," => Ok(Token::operator(Op::Id)),
             _ => {
-                if s.starts_with(|c| char::is_digit(c, 10)) {
+                // variable length operators
+                if s.starts_with(':') {
+                    Ok(Token::operator(Op::FunctionDeclare(1 + get_dot_count(s[1..].chars()))))
+                } else if s.starts_with(|c| char::is_digit(c, 10)) {
                     Ok(Token::scalar(s.parse()?))
                 } else if s.starts_with(char::is_alphabetic)
                         && s.chars().skip(1).all(char::is_alphanumeric) {
