@@ -39,7 +39,21 @@ enum Type {
     Function(Box<Type>, Vec<Type>),
 }
 
-#[derive(Clone, Debug)]
+impl Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            Self::Float => "Float".into(),
+            Self::Int => "Int".into(),
+            Self::Bool => "Bool".into(),
+            Self::String => "String".into(),
+            Self::Nil => "Nil".into(),
+            Self::Any => "Any".into(),
+            Self::Function(r, _) => format!("Function -> {}", *r)
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum Value {
     Float(f64),
     Int(i64),
@@ -48,110 +62,14 @@ pub enum Value {
     Nil,
 }
 
-impl std::ops::Add for Value {
-    type Output = Option<Value>;
-
-    fn add(self, rhs: Self) -> Self::Output {
+impl Value {
+    pub fn get_type(&self) -> Type {
         match self {
-            Self::Int(x) => {
-                match rhs {
-                    Self::Int(y) => Some(Self::Int(x + y)),
-                    Self::Float(y) => Some(Self::Float(x as f64 + y)),
-                    _ => None,
-                }
-            }
-            Self::Float(x) => {
-                match rhs {
-                    Self::Int(y) => Some(Self::Float(x + y as f64)),
-                    Self::Float(y) => Some(Self::Float(x + y)),
-                    _ => None,
-                }
-            }
-            Self::String(x) => {
-                match rhs {
-                    Self::String(y) => Some(Self::String(format!("{x}{y}"))),
-                    _ => None,
-                }
-            }
-            _ => None,
-        }
-    }
-}
-
-impl std::ops::Sub for Value {
-    type Output = Option<Value>;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        match self {
-            Self::Int(x) => {
-                match rhs {
-                    Self::Int(y) => Some(Self::Int(x - y)),
-                    Self::Float(y) => Some(Self::Float(x as f64 - y)),
-                    _ => None,
-                }
-            }
-            Self::Float(x) => {
-                match rhs {
-                    Self::Int(y) => Some(Self::Float(x - y as f64)),
-                    Self::Float(y) => Some(Self::Float(x - y)),
-                    _ => None,
-                }
-            }
-            _ => None,
-        }
-    }
-}
-
-impl std::ops::Mul for Value {
-    type Output = Option<Value>;
-
-    fn mul(self, rhs: Self) -> Self::Output {
-        match self {
-            Self::Int(x) => {
-                match rhs {
-                    Self::Int(y) => Some(Self::Int(x * y)),
-                    Self::Float(y) => Some(Self::Float(x as f64 * y)),
-                    _ => None,
-                }
-            }
-            Self::Float(x) => {
-                match rhs {
-                    Self::Int(y) => Some(Self::Float(x * y as f64)),
-                    Self::Float(y) => Some(Self::Float(x * y)),
-                    _ => None,
-                }
-            }
-            Self::String(x) => {
-                match rhs {
-                    Self::Int(y) => Some(Self::String(x.repeat(y as usize))),
-                    _ => None,
-                }
-            }
-            _ => None,
-        }
-    }
-}
-
-impl std::ops::Div for Value {
-    type Output = Option<Value>;
-
-    fn div(self, rhs: Self) -> Self::Output {
-        match self {
-            Self::Int(x) => {
-                match rhs {
-                    Self::Int(y) => Some(Self::Int(x / y)),
-                    Self::Float(y) => Some(Self::Float(x as f64 / y)),
-                    _ => None,
-                }
-            }
-            Self::Float(x) => {
-                match rhs {
-                    Self::Int(y) => Some(Self::Float(x / y as f64)),
-                    Self::Float(y) => Some(Self::Float(x / y)),
-                    _ => None,
-                }
-            }
-            _ => None,
+            Self::Float(_) => Type::Float,
+            Self::Int(_) => Type::Int,
+            Self::Bool(_) => Type::Bool,
+            Self::String(_) => Type::String,
+            Self::Nil => Type::Nil,
         }
     }
 }

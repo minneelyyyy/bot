@@ -1,5 +1,6 @@
 use super::{Value, Type, FunctionDeclaration};
 use super::parser::{ParseTree, ParseError};
+use super::tokenizer::Op;
 
 use std::collections::HashMap;
 use std::borrow::Cow;
@@ -9,7 +10,7 @@ use std::error::Error;
 #[derive(Debug)]
 pub enum RuntimeError {
     ParseError(ParseError),
-    NoOverloadForTypes,
+    NoOverloadForTypes(String, Vec<Value>),
     ImmutableError(String),
     VariableUndefined(String),
     FunctionUndeclared(String),
@@ -21,7 +22,9 @@ impl Display for RuntimeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::ParseError(e) => write!(f, "{e}"),
-            Self::NoOverloadForTypes => write!(f, "No overload of this operator exists for these operands"),
+            Self::NoOverloadForTypes(op, values)
+                => write!(f, "No overload of `{op}` exists for the operands `[{}]`", 
+                    values.iter().map(|x| format!("{}({x})", x.get_type())).collect::<Vec<_>>().join(", ")),
             Self::ImmutableError(ident) => write!(f, "`{ident}` already exists and cannot be redefined"),
             Self::VariableUndefined(ident) => write!(f, "variable `{ident}` was not defined"),
             Self::FunctionUndeclared(ident) => write!(f, "function `{ident}` was not declared"),
@@ -74,27 +77,47 @@ impl<I: Iterator<Item = Result<ParseTree, ParseError>>> Executor<I> {
         locals: &mut Cow<HashMap<String, Object>>) -> Result<Value, RuntimeError>
     {
         match tree {
-            ParseTree::Add(x, y) => (self.exec(*x, locals)? + self.exec(*y, locals)?)
-                .ok_or(RuntimeError::NoOverloadForTypes),
-            ParseTree::Sub(x, y) => (self.exec(*x, locals)? - self.exec(*y, locals)?)
-                .ok_or(RuntimeError::NoOverloadForTypes),
-            ParseTree::Mul(x, y) => (self.exec(*x, locals)? * self.exec(*y, locals)?)
-                .ok_or(RuntimeError::NoOverloadForTypes),
-            ParseTree::Div(x, y) => (self.exec(*x, locals)? / self.exec(*y, locals)?)
-                .ok_or(RuntimeError::NoOverloadForTypes),
+            ParseTree::Add(x, y) => match (self.exec(*x, locals)?, self.exec(*y, locals)?) {
+                (Value::Int(x), Value::Int(y)) => Ok(Value::Int(x + y)),
+                (Value::Float(x), Value::Int(y)) => Ok(Value::Float(x + y as f64)),
+                (Value::Int(x), Value::Float(y)) => Ok(Value::Float(x as f64 + y)),
+                (Value::Float(x), Value::Float(y)) => Ok(Value::Float(x + y)),
+                (x, y) => Err(RuntimeError::NoOverloadForTypes("+".into(), vec![x, y]))
+            },
+            ParseTree::Sub(x, y) => match (self.exec(*x, locals)?, self.exec(*y, locals)?) {
+                (Value::Int(x), Value::Int(y)) => Ok(Value::Int(x - y)),
+                (Value::Float(x), Value::Int(y)) => Ok(Value::Float(x - y as f64)),
+                (Value::Int(x), Value::Float(y)) => Ok(Value::Float(x as f64 - y)),
+                (Value::Float(x), Value::Float(y)) => Ok(Value::Float(x - y)),
+                (x, y) => Err(RuntimeError::NoOverloadForTypes("-".into(), vec![x, y]))
+            },
+            ParseTree::Mul(x, y) => match (self.exec(*x, locals)?, self.exec(*y, locals)?) {
+                (Value::Int(x), Value::Int(y)) => Ok(Value::Int(x * y)),
+                (Value::Float(x), Value::Int(y)) => Ok(Value::Float(x * y as f64)),
+                (Value::Int(x), Value::Float(y)) => Ok(Value::Float(x as f64 * y)),
+                (Value::Float(x), Value::Float(y)) => Ok(Value::Float(x * y)),
+                (x, y) => Err(RuntimeError::NoOverloadForTypes("*".into(), vec![x, y]))
+            },
+            ParseTree::Div(x, y) => match (self.exec(*x, locals)?, self.exec(*y, locals)?) {
+                (Value::Int(x), Value::Int(y)) => Ok(Value::Int(x / y)),
+                (Value::Float(x), Value::Int(y)) => Ok(Value::Float(x / y as f64)),
+                (Value::Int(x), Value::Float(y)) => Ok(Value::Float(x as f64 / y)),
+                (Value::Float(x), Value::Float(y)) => Ok(Value::Float(x / y)),
+                (x, y) => Err(RuntimeError::NoOverloadForTypes("*".into(), vec![x, y]))
+            },
             ParseTree::Exp(x, y) => match (self.exec(*x, locals)?, self.exec(*y, locals)?) {
                 (Value::Int(x), Value::Int(y)) => Ok(Value::Int(x.pow(y as u32))),
                 (Value::Int(x), Value::Float(y)) => Ok(Value::Float((x as f64).powf(y))),
                 (Value::Float(x), Value::Int(y)) => Ok(Value::Float(x.powf(y as f64))),
                 (Value::Float(x), Value::Float(y)) => Ok(Value::Float(x.powf(y))),
-                _ => Err(RuntimeError::NoOverloadForTypes),
+                (x, y) => Err(RuntimeError::NoOverloadForTypes("**".into(), vec![x, y])),
             },
             ParseTree::Mod(x, y) => match (self.exec(*x, locals)?, self.exec(*y, locals)?) {
                 (Value::Int(x), Value::Int(y)) => Ok(Value::Int(x % y)),
                 (Value::Float(x), Value::Int(y)) => Ok(Value::Float(x % y as f64)),
                 (Value::Int(x), Value::Float(y)) => Ok(Value::Float(x as f64 % y)),
                 (Value::Float(x), Value::Float(y)) => Ok(Value::Float(x % y)),
-                _ => Err(RuntimeError::NoOverloadForTypes),
+                (x, y) => Err(RuntimeError::NoOverloadForTypes("%".into(), vec![x, y])),
             },
             ParseTree::EqualTo(x, y) => match (self.exec(*x, locals)?, self.exec(*y, locals)?) {
                 (Value::Int(x), Value::Int(y)) => Ok(Value::Bool(x == y)),
@@ -103,39 +126,39 @@ impl<I: Iterator<Item = Result<ParseTree, ParseError>>> Executor<I> {
                 (Value::Float(x), Value::Float(y)) => Ok(Value::Bool(x == y)),
                 (Value::Bool(x), Value::Bool(y)) => Ok(Value::Bool(x == y)),
                 (Value::String(x), Value::String(y)) => Ok(Value::Bool(x == y)),
-                _ => Err(RuntimeError::NoOverloadForTypes)
+                (x, y) => Err(RuntimeError::NoOverloadForTypes("==".into(), vec![x, y])),
             },
             ParseTree::GreaterThan(x, y) => match (self.exec(*x, locals)?, self.exec(*y, locals)?) {
                 (Value::Int(x), Value::Int(y)) => Ok(Value::Bool(x > y)),
                 (Value::Int(x), Value::Float(y)) => Ok(Value::Bool(x as f64 > y)),
                 (Value::Float(x), Value::Int(y)) => Ok(Value::Bool(x > y as f64)),
                 (Value::Float(x), Value::Float(y)) => Ok(Value::Bool(x > y)),
-                _ => Err(RuntimeError::NoOverloadForTypes)
+                (x, y) => Err(RuntimeError::NoOverloadForTypes(">".into(), vec![x, y])),
             },
             ParseTree::GreaterThanOrEqualTo(x, y) => match (self.exec(*x, locals)?, self.exec(*y, locals)?) {
                 (Value::Int(x), Value::Int(y)) => Ok(Value::Bool(x >= y)),
                 (Value::Int(x), Value::Float(y)) => Ok(Value::Bool(x as f64 >= y)),
                 (Value::Float(x), Value::Int(y)) => Ok(Value::Bool(x >= y as f64)),
                 (Value::Float(x), Value::Float(y)) => Ok(Value::Bool(x >= y)),
-                _ => Err(RuntimeError::NoOverloadForTypes)
+                (x, y) => Err(RuntimeError::NoOverloadForTypes(">=".into(), vec![x, y])),
             },
             ParseTree::LessThan(x, y) => match (self.exec(*x, locals)?, self.exec(*y, locals)?) {
                 (Value::Int(x), Value::Int(y)) => Ok(Value::Bool(x < y)),
                 (Value::Int(x), Value::Float(y)) => Ok(Value::Bool((x as f64) < y)),
                 (Value::Float(x), Value::Int(y)) => Ok(Value::Bool(x < y as f64)),
                 (Value::Float(x), Value::Float(y)) => Ok(Value::Bool(x < y)),
-                _ => Err(RuntimeError::NoOverloadForTypes)
+                (x, y) => Err(RuntimeError::NoOverloadForTypes("<".into(), vec![x, y])),
             },
             ParseTree::LessThanOrEqualTo(x, y) => match (self.exec(*x, locals)?, self.exec(*y, locals)?) {
                 (Value::Int(x), Value::Int(y)) => Ok(Value::Bool(x <= y)),
                 (Value::Int(x), Value::Float(y)) => Ok(Value::Bool(x as f64 <= y)),
                 (Value::Float(x), Value::Int(y)) => Ok(Value::Bool(x <= y as f64)),
                 (Value::Float(x), Value::Float(y)) => Ok(Value::Bool(x <= y)),
-                _ => Err(RuntimeError::NoOverloadForTypes)
+                (x, y) => Err(RuntimeError::NoOverloadForTypes("<=".into(), vec![x, y])),
             },
             ParseTree::Not(x) => match self.exec(*x, locals)? {
                 Value::Bool(x) => Ok(Value::Bool(!x)),
-                _ => Err(RuntimeError::NoOverloadForTypes)
+                x => Err(RuntimeError::NoOverloadForTypes("not".into(), vec![x]))
             },
             ParseTree::Equ(ident, body, scope) => {
                 if self.globals.contains_key(&ident) || locals.contains_key(&ident) {
