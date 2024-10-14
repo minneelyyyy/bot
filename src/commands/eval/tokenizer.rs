@@ -40,6 +40,7 @@ pub enum Op {
     Div,
     Exp,
     Equ,
+    Mod,
     LazyEqu,
     GlobalEqu,
     LazyGlobalEqu,
@@ -90,8 +91,9 @@ impl Token {
             "+"  => Ok(Token::Operator(Op::Add)),
             "-"  => Ok(Token::Operator(Op::Sub)),
             "*"  => Ok(Token::Operator(Op::Mul)),
-            "**" => Ok(Token::Operator(Op::Exp)),
             "/"  => Ok(Token::Operator(Op::Div)),
+            "**" => Ok(Token::Operator(Op::Exp)),
+            "%" => Ok(Token::Operator(Op::Mod)),
             "="  => Ok(Token::Operator(Op::Equ)),
             "."  => Ok(Token::Operator(Op::LazyEqu)),
             "=>" => Ok(Token::Operator(Op::GlobalEqu)),
@@ -170,8 +172,8 @@ impl<R: BufRead> std::iter::Iterator for Tokenizer<R> {
         let mut input = String::new();
 
         match self.reader.read_to_string(&mut input) {
-            Ok(0) => return None,
-            Err(e) => return Some(Err(TokenizeError::IO(e))),
+            Ok(0) => None,
+            Err(e) => Some(Err(TokenizeError::IO(e))),
             _ => {
                 let re = regex::Regex::new(r#"[a-zA-Z0-9\.'_]+|[`~!@#\$%\^&\*\(\)\+-=\[\]\{\}\\|;:,<\.>/\?]+|("[^"]+")"#).expect("This wont fail promise :3");
 

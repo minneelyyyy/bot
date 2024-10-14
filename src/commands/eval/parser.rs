@@ -41,6 +41,7 @@ pub enum ParseTree {
     Mul(Box<ParseTree>, Box<ParseTree>),
     Div(Box<ParseTree>, Box<ParseTree>),
     Exp(Box<ParseTree>, Box<ParseTree>),
+    Mod(Box<ParseTree>, Box<ParseTree>),
 
     // Boolean Operations
     EqualTo(Box<ParseTree>, Box<ParseTree>),
@@ -115,6 +116,10 @@ impl ParseTree {
                                 Box::new(ParseTree::parse(tokens, globals, locals)?)
                             )),
                             Op::Exp => Ok(ParseTree::Exp(
+                                Box::new(ParseTree::parse(tokens, globals, locals)?),
+                                Box::new(ParseTree::parse(tokens, globals, locals)?)
+                            )),
+                            Op::Mod => Ok(ParseTree::Mod(
                                 Box::new(ParseTree::parse(tokens, globals, locals)?),
                                 Box::new(ParseTree::parse(tokens, globals, locals)?)
                             )),

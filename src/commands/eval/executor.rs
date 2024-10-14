@@ -90,6 +90,13 @@ impl<I: Iterator<Item = Result<ParseTree, ParseError>>> Executor<I> {
                 (Value::Float(x), Value::Float(y)) => Ok(Value::Float(x.powf(y))),
                 _ => Err(RuntimeError::NoOverloadForTypes),
             },
+            ParseTree::Mod(x, y) => match (self.exec(*x, locals, in_function)?, self.exec(*y, locals, in_function)?) {
+                (Value::Int(x), Value::Int(y)) => Ok(Value::Int(x % y)),
+                (Value::Float(x), Value::Int(y)) => Ok(Value::Float(x % y as f64)),
+                (Value::Int(x), Value::Float(y)) => Ok(Value::Float(x as f64 % y)),
+                (Value::Float(x), Value::Float(y)) => Ok(Value::Float(x % y)),
+                _ => Err(RuntimeError::NoOverloadForTypes),
+            },
             ParseTree::EqualTo(x, y) => match (self.exec(*x, locals, in_function)?, self.exec(*y, locals, in_function)?) {
                 (Value::Int(x), Value::Int(y)) => Ok(Value::Bool(x == y)),
                 (Value::Int(x), Value::Float(y)) => Ok(Value::Bool(x as f64 == y)),
@@ -255,5 +262,13 @@ impl<I: Iterator<Item = Result<ParseTree, ParseError>>> Iterator for Executor<I>
             Some(Err(e)) => Some(Err(RuntimeError::ParseError(e))),
             None => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn recursion() {
+        let program = ": countdown i ?? <= i i 0 countdown - i 1";
     }
 }
