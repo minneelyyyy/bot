@@ -120,9 +120,9 @@ name = "bot"
 version = "0.1.0"
 dependencies = [
  "dotenv",
+ "lamm",
  "poise",
  "rand",
- "regex",
  "tokio",
 ]
 
@@ -732,6 +732,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0cb94a0ffd3f3ee755c20f7d8752f45cac88605a4dcf808abcff72873296ec7b"
 dependencies = [
  "wasm-bindgen",
+]
+
+[[package]]
+name = "lamm"
+version = "0.1.0"
+source = "git+https://github.com/minneelyyyy/lamm?branch=dev#4b2fefd7982f0701c9526846dece0541b6224a8f"
+dependencies = [
+ "regex",
 ]
 
 [[package]]
