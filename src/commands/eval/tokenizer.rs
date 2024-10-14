@@ -1,8 +1,36 @@
-use std::error;
+use std::{error, io};
+use std::collections::VecDeque;
 
-use crate::common::Error;
+use super::Value;
 use std::fmt::{Display, Formatter};
-use std::str::FromStr;
+use std::io::{BufRead, Cursor};
+
+#[derive(Debug)]
+pub enum TokenizeError {
+    InvalidDynamicOperator(String),
+    InvalidNumericConstant(String),
+    InvalidIdentifier(String),
+    UnableToMatchToken(String),
+    IO(io::Error),
+}
+
+impl Display for TokenizeError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TokenizeError::InvalidDynamicOperator(op)
+                => write!(f, "invalid dynamic operator `{op}`"),
+            TokenizeError::InvalidNumericConstant(t)
+                => write!(f, "invalid numeric constant `{t}`"),
+            TokenizeError::InvalidIdentifier(ident)
+                => write!(f, "invalid identifier `{ident}`"),
+            TokenizeError::UnableToMatchToken(token)
+                => write!(f, "the token `{token}` was unable to be parsed"),
+            TokenizeError::IO(io) => write!(f, "{io}")
+        }
+    }
+}
+
+impl error::Error for TokenizeError {}
 
 #[derive(Debug, Clone)]
 pub enum Op {
@@ -18,87 +46,159 @@ pub enum Op {
     FunctionDeclare(usize),
     Compose,
     Id,
+    If,
+    IfElse,
+    GreaterThan,
+    LessThan,
+    EqualTo,
+    GreaterThanOrEqualTo,
+    LessThanOrEqualTo,
+    Not,
 }
 
 #[derive(Debug, Clone)]
 pub enum Token {
     Identifier(String),
-    Scalar(f64),
     Operator(Op),
+    Constant(Value),
 }
 
-#[derive(Debug, Clone)]
-struct ParseError(String);
-
-impl Display for ParseError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
+fn get_dot_count(s: &str) -> Option<usize> {
+    s.chars().fold(Some(0), |acc, c|
+        match c {
+            ':' => acc.map(|acc| acc + 2),
+            '.' => acc.map(|acc| acc + 1),
+            _ => None,
+        }
+    )
 }
 
-impl error::Error for ParseError {
-    fn description(&self) -> &str {
-        &self.0
-    }
+fn valid_identifier(c: char) -> bool {
+    c.is_alphanumeric() || c == '\'' || c == '_'
 }
 
 impl Token {
-    pub fn identifier(str: String) -> Token {
-        Token::Identifier(str)
-    }
+    fn parse(s: &str) -> Result<Self, TokenizeError> {
+        let string = regex::Regex::new(r#"".+""#).expect("LOL!");
 
-    pub fn scalar(value: f64) -> Token {
-        Token::Scalar(value)
-    }
+        if string.is_match(s) {
+            return Ok(Token::Constant(Value::String(s[1..s.len() - 1].to_string())));
+        }
 
-    pub fn operator(op: Op) -> Token {
-        Token::Operator(op)
-    }
-    pub fn tokenize(s: &str) -> Result<Vec<Self>, Error> {
-        s.split_whitespace().map(Token::from_str).collect()
-    }
-}
-
-fn get_dot_count<I: Iterator<Item = char>>(s: I) -> usize {
-    s.fold(0, |acc, c| acc + match c {
-        ':' => 2,
-        '.' => 1,
-        _ => 0,
-    })
-}
-
-impl FromStr for Token {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let s = if s.starts_with("\\") { s.chars().skip(1).collect() } else { s.to_string() };
-
-        match s.as_str() {
+        match s {
             // First check if s is an operator
-            "+"  => Ok(Token::operator(Op::Add)),
-            "-"  => Ok(Token::operator(Op::Sub)),
-            "*"  => Ok(Token::operator(Op::Mul)),
-            "**" => Ok(Token::operator(Op::Exp)),
-            "/"  => Ok(Token::operator(Op::Div)),
-            "="  => Ok(Token::operator(Op::Equ)),
-            "."  => Ok(Token::operator(Op::LazyEqu)),
-            "=>" => Ok(Token::operator(Op::GlobalEqu)),
-            ".>" => Ok(Token::operator(Op::LazyGlobalEqu)),
-            "~"  => Ok(Token::operator(Op::Compose)),
-            "," => Ok(Token::operator(Op::Id)),
+            "+"  => Ok(Token::Operator(Op::Add)),
+            "-"  => Ok(Token::Operator(Op::Sub)),
+            "*"  => Ok(Token::Operator(Op::Mul)),
+            "**" => Ok(Token::Operator(Op::Exp)),
+            "/"  => Ok(Token::Operator(Op::Div)),
+            "="  => Ok(Token::Operator(Op::Equ)),
+            "."  => Ok(Token::Operator(Op::LazyEqu)),
+            "=>" => Ok(Token::Operator(Op::GlobalEqu)),
+            ".>" => Ok(Token::Operator(Op::LazyGlobalEqu)),
+            "~"  => Ok(Token::Operator(Op::Compose)),
+            "," => Ok(Token::Operator(Op::Id)),
+            "?" => Ok(Token::Operator(Op::If)),
+            "??" => Ok(Token::Operator(Op::IfElse)),
+            ">" => Ok(Token::Operator(Op::GreaterThan)),
+            "<" => Ok(Token::Operator(Op::LessThan)),
+            ">=" => Ok(Token::Operator(Op::GreaterThanOrEqualTo)),
+            "<=" => Ok(Token::Operator(Op::LessThanOrEqualTo)),
+            "==" => Ok(Token::Operator(Op::EqualTo)),
+
+            // then some keywords
+            "true" => Ok(Token::Constant(Value::Bool(true))),
+            "false" => Ok(Token::Constant(Value::Bool(false))),
+            "not" => Ok(Token::Operator(Op::Not)),
+
+            // then variable length keywords, constants, and identifiers
             _ => {
-                // variable length operators
                 if s.starts_with(':') {
-                    Ok(Token::operator(Op::FunctionDeclare(1 + get_dot_count(s[1..].chars()))))
+                    Ok(Token::Operator(Op::FunctionDeclare(
+                        get_dot_count(s).map(|x| x - 1).ok_or(TokenizeError::InvalidDynamicOperator(s.to_string()))?
+                    )))
                 } else if s.starts_with(|c| char::is_digit(c, 10)) {
-                    Ok(Token::scalar(s.parse()?))
-                } else if s.starts_with(char::is_alphabetic)
-                        && s.chars().skip(1).all(char::is_alphanumeric) {
-                    Ok(Token::identifier(s.to_string()))
+                    if let Ok(int) = s.parse::<i64>() {
+                        Ok(Token::Constant(Value::Int(int)))
+                    } else if let Ok(float) = s.parse::<f64>() {
+                        Ok(Token::Constant(Value::Float(float)))
+                    } else {
+                        Err(TokenizeError::InvalidNumericConstant(s.to_string()))
+                    }
+                } else if s.starts_with(valid_identifier) {
+                    let valid = s.chars().skip(1).all(valid_identifier);
+                    valid.then(|| Token::Identifier(s.to_string())).ok_or(TokenizeError::InvalidIdentifier(s.to_string()))
                 } else {
-                    Err(Box::new(ParseError(format!("Failed to parse \"{}\"", s))))
+                    Err(TokenizeError::UnableToMatchToken(s.to_string()))
                 }
             }
         }
+    }
+}
+
+pub struct Tokenizer<R: BufRead> {
+    reader: R,
+    tokens: VecDeque<Token>,
+}
+
+impl<R: BufRead> Tokenizer<R> {
+    pub fn new(reader: R) -> Self {
+        Self {
+            reader,
+            tokens: VecDeque::new(),
+        }
+    }
+}
+
+impl std::str::FromStr for Tokenizer<Cursor<String>> {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let cursor = Cursor::new(s.to_string());
+        Ok(Tokenizer::new(cursor))
+    }
+}
+
+impl<R: BufRead> std::iter::Iterator for Tokenizer<R> {
+    type Item = Result<Token, TokenizeError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(token) = self.tokens.pop_front() {
+            return Some(Ok(token));
+        }
+
+        let mut input = String::new();
+
+        match self.reader.read_to_string(&mut input) {
+            Ok(0) => return None,
+            Err(e) => return Some(Err(TokenizeError::IO(e))),
+            _ => {
+                let re = regex::Regex::new(r#"[a-zA-Z0-9\.'_]+|[`~!@#\$%\^&\*\(\)\+-=\[\]\{\}\\|;:,<\.>/\?]+|("[^"]+")"#).expect("This wont fail promise :3");
+
+                for token in re.find_iter(input.as_str()).map(|mat| mat.as_str()).map(Token::parse) {
+                    match token {
+                        Ok(token) => self.tokens.push_back(token),
+                        Err(e) => return Some(Err(e)),
+                    }
+                }
+
+                self.tokens.pop_front().map(|x| Ok(x))
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_string_parsing() {
+        let program = r#"+ "hi" "bye" "whats good""#;
+        let tokenizer = Tokenizer::from_str(program).unwrap();
+        let tokens: Vec<Token> = tokenizer.collect::<Result<_, TokenizeError>>().expect("tokenizer failure");
+
+        println!("{tokens:?}");
     }
 }
