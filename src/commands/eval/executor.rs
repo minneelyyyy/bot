@@ -16,6 +16,7 @@ pub enum RuntimeError {
     FunctionUndeclared(String),
     FunctionUndefined(String),
     NotAVariable(String),
+    ParseFail(String, Type),
 }
 
 impl Display for RuntimeError {
@@ -30,6 +31,7 @@ impl Display for RuntimeError {
             Self::FunctionUndeclared(ident) => write!(f, "function `{ident}` was not declared"),
             Self::FunctionUndefined(ident) => write!(f, "function `{ident}` was not defined"),
             Self::NotAVariable(ident) => write!(f, "`{ident}` is a function but was attempted to be used like a variable"),
+            Self::ParseFail(s, t) => write!(f, "`\"{s}\"` couldn't be parsed into {}", t),
         }
     }
 }
@@ -82,6 +84,7 @@ impl<I: Iterator<Item = Result<ParseTree, ParseError>>> Executor<I> {
                 (Value::Float(x), Value::Int(y)) => Ok(Value::Float(x + y as f64)),
                 (Value::Int(x), Value::Float(y)) => Ok(Value::Float(x as f64 + y)),
                 (Value::Float(x), Value::Float(y)) => Ok(Value::Float(x + y)),
+                (Value::String(x), Value::String(y)) => Ok(Value::String(format!("{x}{y}"))),
                 (x, y) => Err(RuntimeError::NoOverloadForTypes("+".into(), vec![x, y]))
             },
             ParseTree::Sub(x, y) => match (self.exec(*x, locals)?, self.exec(*y, locals)?) {
@@ -96,6 +99,7 @@ impl<I: Iterator<Item = Result<ParseTree, ParseError>>> Executor<I> {
                 (Value::Float(x), Value::Int(y)) => Ok(Value::Float(x * y as f64)),
                 (Value::Int(x), Value::Float(y)) => Ok(Value::Float(x as f64 * y)),
                 (Value::Float(x), Value::Float(y)) => Ok(Value::Float(x * y)),
+                (Value::String(x), Value::Int(y)) => Ok(Value::String(x.repeat(y as usize))),
                 (x, y) => Err(RuntimeError::NoOverloadForTypes("*".into(), vec![x, y]))
             },
             ParseTree::Div(x, y) => match (self.exec(*x, locals)?, self.exec(*y, locals)?) {
@@ -264,6 +268,34 @@ impl<I: Iterator<Item = Result<ParseTree, ParseError>>> Executor<I> {
                 }
             },
             ParseTree::Constant(value) => Ok(value),
+            ParseTree::ToInt(x) => match self.exec(*x, locals)? {
+                Value::Int(x) => Ok(Value::Int(x)),
+                Value::Float(x) => Ok(Value::Int(x as i64)),
+                Value::Bool(x) => Ok(Value::Int(if x { 1 } else { 0 })),
+                Value::String(x) => {
+                    let r: i64 = x.parse().map_err(|_| RuntimeError::ParseFail(x.clone(), Type::Int))?;
+                    Ok(Value::Int(r))
+                }
+                x => Err(RuntimeError::NoOverloadForTypes("int".into(), vec![x])),
+            },
+            ParseTree::ToFloat(x) => match self.exec(*x, locals)? {
+                Value::Int(x) => Ok(Value::Float(x as f64)),
+                Value::Float(x) => Ok(Value::Float(x)),
+                Value::Bool(x) => Ok(Value::Float(if x { 1.0 } else { 0.0 })),
+                Value::String(x) => {
+                    let r: f64 = x.parse().map_err(|_| RuntimeError::ParseFail(x.clone(), Type::Int))?;
+                    Ok(Value::Float(r))
+                }
+                x => Err(RuntimeError::NoOverloadForTypes("float".into(), vec![x])),
+            },
+            ParseTree::ToBool(x) => match self.exec(*x, locals)? {
+                Value::Int(x) => Ok(Value::Bool(x != 0)),
+                Value::Float(x) => Ok(Value::Bool(x != 0.0)),
+                Value::Bool(x) => Ok(Value::Bool(x)),
+                Value::String(x) => Ok(Value::Bool(!x.is_empty())),
+                x => Err(RuntimeError::NoOverloadForTypes("bool".into(), vec![x])),
+            },
+            ParseTree::ToString(x) => Ok(Value::String(format!("{}", self.exec(*x, locals)?))),
         }
     }
 }

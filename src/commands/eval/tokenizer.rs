@@ -55,6 +55,10 @@ pub enum Op {
     GreaterThanOrEqualTo,
     LessThanOrEqualTo,
     Not,
+    IntCast,
+    FloatCast,
+    BoolCast,
+    StringCast,
 }
 
 #[derive(Debug, Clone)]
@@ -113,13 +117,19 @@ impl Token {
             "false" => Ok(Token::Constant(Value::Bool(false))),
             "not" => Ok(Token::Operator(Op::Not)),
 
+            // Type casting
+            "int" => Ok(Token::Operator(Op::IntCast)),
+            "float" => Ok(Token::Operator(Op::FloatCast)),
+            "bool" => Ok(Token::Operator(Op::BoolCast)),
+            "string" => Ok(Token::Operator(Op::StringCast)),
+
             // then variable length keywords, constants, and identifiers
             _ => {
                 if s.starts_with(':') {
                     Ok(Token::Operator(Op::FunctionDeclare(
                         get_dot_count(s).map(|x| x - 1).ok_or(TokenizeError::InvalidDynamicOperator(s.to_string()))?
                     )))
-                } else if s.starts_with(|c| char::is_digit(c, 10)) {
+                } else if s.starts_with(|c| char::is_digit(c, 10) || c == '-') {
                     if let Ok(int) = s.parse::<i64>() {
                         Ok(Token::Constant(Value::Int(int)))
                     } else if let Ok(float) = s.parse::<f64>() {
@@ -175,7 +185,7 @@ impl<R: BufRead> std::iter::Iterator for Tokenizer<R> {
             Ok(0) => None,
             Err(e) => Some(Err(TokenizeError::IO(e))),
             _ => {
-                let re = regex::Regex::new(r#"[a-zA-Z0-9\.'_]+|[`~!@#\$%\^&\*\(\)\+-=\[\]\{\}\\|;:,<\.>/\?]+|("[^"]+")"#).expect("This wont fail promise :3");
+                let re = regex::Regex::new(r#"(\-?[a-zA-Z0-9\.'_]+)|[`~!@#\$%\^&\*\(\)\+-=\[\]\{\}\\|;:,<\.>/\?]+|("[^"]+")"#).expect("This wont fail promise :3");
 
                 for token in re.find_iter(input.as_str()).map(|mat| mat.as_str()).map(Token::parse) {
                     match token {
@@ -197,7 +207,7 @@ mod tests {
 
     #[test]
     fn test_string_parsing() {
-        let program = r#"+ "hi" "bye" "whats good""#;
+        let program = r#"- -1 2"#;
         let tokenizer = Tokenizer::from_str(program).unwrap();
         let tokens: Vec<Token> = tokenizer.collect::<Result<_, TokenizeError>>().expect("tokenizer failure");
 

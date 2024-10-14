@@ -70,6 +70,12 @@ pub enum ParseTree {
     FunctionCall(String, Vec<ParseTree>),
     Variable(String),
     Constant(Value),
+
+    // Type Casts
+    ToInt(Box<ParseTree>),
+    ToFloat(Box<ParseTree>),
+    ToBool(Box<ParseTree>),
+    ToString(Box<ParseTree>),
 }
 
 impl ParseTree {
@@ -218,7 +224,11 @@ impl ParseTree {
                                 Box::new(ParseTree::parse(tokens, globals, locals)?),
                                 Box::new(ParseTree::parse(tokens, globals, locals)?)
                             )),
-                            Op::Not => Ok(ParseTree::Not(Box::new(ParseTree::parse(tokens, globals, locals)?)))
+                            Op::Not => Ok(ParseTree::Not(Box::new(ParseTree::parse(tokens, globals, locals)?))),
+                            Op::IntCast => Ok(ParseTree::ToInt(Box::new(ParseTree::parse(tokens, globals, locals)?))),
+                            Op::FloatCast => Ok(ParseTree::ToFloat(Box::new(ParseTree::parse(tokens, globals, locals)?))),
+                            Op::BoolCast => Ok(ParseTree::ToBool(Box::new(ParseTree::parse(tokens, globals, locals)?))),
+                            Op::StringCast => Ok(ParseTree::ToString(Box::new(ParseTree::parse(tokens, globals, locals)?))),
                         }
                     }
                 }
@@ -275,7 +285,7 @@ impl<I: Iterator<Item = Result<Token, TokenizeError>>> Iterator for Parser<I> {
 #[cfg(test)]
 mod tests {
     use crate::commands::eval::tokenizer::Tokenizer;
-    use super::{*, ParseTree::*};
+    use super::*;
 
     use std::str::FromStr;
 
