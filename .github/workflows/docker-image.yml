@@ -3,6 +3,8 @@ name: Docker Image CI
 on:
   push:
     branches: [ "main" ]
+  repository_dispatch:
+    types: [ lamm-updated ]
 
 jobs:
   build_amd64: 
