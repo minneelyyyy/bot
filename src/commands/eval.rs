@@ -7,11 +7,15 @@ pub async fn eval(ctx: Context<'_>,
                   #[rest]
                   expr: String) -> Result<(), Error>
 {
-	let expr = expr.strip_prefix("```").and_then(|s| s.strip_suffix("```")).unwrap_or(&expr);
+	let expr = expr.strip_prefix("```")
+		.and_then(|s| s.strip_suffix("```")).unwrap_or(&expr);
 
-	let values = lamm::evaluate(Cursor::new(expr));
+	let mut output = Vec::new();
+	let writer = Cursor::new(&mut output);
 
-	let output = values.fold(Ok(String::new()), |acc, v| {
+	let runtime = lamm::Runtime::new(Cursor::new(expr)).stdout(writer);
+
+	let values = runtime.values().fold(Ok(String::new()), |acc, v| {
 		if acc.is_err() {
 			return acc;
 		};
@@ -22,9 +26,9 @@ pub async fn eval(ctx: Context<'_>,
 			Ok(v) => Ok(format!("{x}\n{v}")),
 			Err(e) => Err(e),
 		}
-	});
+	})?;
 
-	ctx.reply(output?).await?;
+	ctx.reply(format!("{}{values}", String::from_utf8(output)?)).await?;
 
     Ok(())
 }
