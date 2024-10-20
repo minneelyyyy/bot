@@ -25,7 +25,7 @@ pub async fn eval(ctx: Context<'_>,
 		}
 	})?;
 
-	ctx.reply(format!("{}{values}", String::from_utf8(output)?)).await?;
+	ctx.reply(format!("{values}")).await?;
 
     Ok(())
 }
