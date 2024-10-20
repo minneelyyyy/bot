@@ -20,6 +20,7 @@ pub async fn eval(ctx: Context<'_>,
 		let x = acc.unwrap();
 
 		match v {
+			Ok(lamm::Value::Nil) => Ok(x),
 			Ok(v) => Ok(format!("{x}\n{v}")),
 			Err(e) => Err(e),
 		}
