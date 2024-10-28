@@ -7,8 +7,21 @@ pub async fn eval(ctx: Context<'_>,
                   #[rest]
                   expr: String) -> Result<(), Error>
 {
-	let expr = expr.strip_prefix("```")
-		.and_then(|s| s.strip_suffix("```")).unwrap_or(&expr);
+	let expr = if expr.starts_with("```\n") {
+		expr.strip_prefix("```\n")
+		.and_then(|s| s.strip_suffix("```"))
+		.unwrap_or(&expr)
+	} else if expr.starts_with("```") {
+		expr.strip_prefix("```")
+		.and_then(|s| s.strip_suffix("```"))
+		.unwrap_or(&expr)
+	} else if expr.starts_with('`') {
+		expr.strip_prefix("`")
+			.and_then(|s| s.strip_suffix("`"))
+			.unwrap_or(&expr)
+	} else {
+		&expr
+	};
 
 	let runtime = lamm::Runtime::new(Cursor::new(expr), "<eval>");
 
