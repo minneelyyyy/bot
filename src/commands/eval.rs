@@ -12,7 +12,7 @@ pub async fn eval(ctx: Context<'_>,
 
 	let runtime = lamm::Runtime::new(Cursor::new(expr), "<eval>");
 
-	let values = runtime.fold(Ok(String::new()), |acc, v| {
+	let values = runtime.values().fold(Ok(String::new()), |acc, v| {
 		if acc.is_err() {
 			return acc;
 		};
@@ -28,7 +28,7 @@ pub async fn eval(ctx: Context<'_>,
 
 	match values {
 		Ok(values) => ctx.reply(format!("{values}")).await,
-		Err(e) => ctx.reply(format!("```\nerror: {e}\n```")).await,
+		Err(e) => ctx.reply(format!("```ansi\n\x1b[31;1merror\x1b[0m: {e}\n```")).await,
 	}?;
 
     Ok(())
