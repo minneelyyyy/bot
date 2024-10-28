@@ -10,7 +10,7 @@ pub async fn eval(ctx: Context<'_>,
 	let expr = expr.strip_prefix("```")
 		.and_then(|s| s.strip_suffix("```")).unwrap_or(&expr);
 
-	let mut runtime = lamm::Runtime::new(Cursor::new(expr), "<eval>");
+	let runtime = lamm::Runtime::new(Cursor::new(expr), "<eval>");
 
 	let values = runtime.fold(Ok(String::new()), |acc, v| {
 		if acc.is_err() {
@@ -24,9 +24,12 @@ pub async fn eval(ctx: Context<'_>,
 			Ok(v) => Ok(format!("{x}\n{v}")),
 			Err(e) => Err(e),
 		}
-	})?;
+	});
 
-	ctx.reply(format!("{values}")).await?;
+	match values {
+		Ok(values) => ctx.reply(format!("{values}")).await,
+		Err(e) => ctx.reply(format!("```\nerror: {e}\n```")).await,
+	}?;
 
     Ok(())
 }
