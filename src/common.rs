@@ -4,7 +4,8 @@ use std::collections::HashMap;
 use poise::serenity_prelude::UserId;
 
 pub struct Data {
-    pub users: Arc<Mutex<HashMap<UserId, usize>>>
+    pub users: Arc<Mutex<HashMap<UserId, usize>>>,
+    pub mentions: Arc<Mutex<HashMap<UserId, std::time::Instant>>>,
 }
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
