@@ -3,13 +3,11 @@ pub mod balance;
 pub mod give;
 pub mod wager;
 
-use crate::common::{Data, Error};
+use crate::common::Error;
 use poise::serenity_prelude::UserId;
-use sqlx::Row;
+use sqlx::{Row, PgConnection};
 
-pub async fn get_balance(id: UserId, data: &Data) -> Result<i32, Error> {
-    let db = &data.database;
-
+pub async fn get_balance(id: UserId, db: &mut PgConnection) -> Result<i32, Error> {
     let row = sqlx::query("SELECT balance FROM bank WHERE id = $1")
         .bind(id.get() as i64)
         .fetch_one(db).await.ok();
@@ -23,9 +21,7 @@ pub async fn get_balance(id: UserId, data: &Data) -> Result<i32, Error> {
     Ok(balance)
 }
 
-pub async fn change_balance(id: UserId, balance: i32, data: &Data) -> Result<(), Error> {
-    let db = &data.database;
-
+pub async fn change_balance(id: UserId, balance: i32, db: &mut PgConnection) -> Result<(), Error> {
     sqlx::query("INSERT INTO bank (id, balance) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET balance = EXCLUDED.balance")
         .bind(id.get() as i64)
         .bind(balance)

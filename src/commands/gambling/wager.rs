@@ -8,7 +8,10 @@ pub async fn wager(
     amount: i32) -> Result<(), Error>
 {
     let data = ctx.data();
-    let mut wealth = super::get_balance(ctx.author().id, &data).await?;
+    let mut db = data.database.lock().await;
+    let db = db.as_mut();
+
+    let mut wealth = super::get_balance(ctx.author().id, db).await?;
 
     if wealth < amount {
         ctx.reply(format!("You do not have enough tokens (**{}**) to wager this amount.",
@@ -26,7 +29,7 @@ pub async fn wager(
                           amount, wealth)).await?;
     }
 
-    super::change_balance(ctx.author().id, wealth, &data).await?;
+    super::change_balance(ctx.author().id, wealth, db).await?;
 
     Ok(())
 }

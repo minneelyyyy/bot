@@ -13,7 +13,7 @@ use tokio::sync::Mutex;
 
 use clap::Parser;
 
-use sqlx::postgres::PgPoolOptions;
+use sqlx::{PgConnection, Connection};
 
 #[derive(Parser, Debug)]
 struct BotArgs {
@@ -68,9 +68,7 @@ async fn main() -> Result<(), Error> {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
 
-                let database = PgPoolOptions::new()
-                    .max_connections(4)
-                    .connect(&database_url).await?;
+                let mut database = PgConnection::connect(&database_url).await?;
 
                 sqlx::query(
                     r#"
@@ -79,10 +77,12 @@ async fn main() -> Result<(), Error> {
                         balance INT
                     )
                     "#,
-                ).execute(&database).await?;
+                ).execute(&mut database).await?;
+
+                println!("Bot is ready!");
 
                 Ok(Data {
-                    database,
+                    database: Arc::new(Mutex::new(database)),
                     mentions: Arc::new(Mutex::new(HashMap::new())),
                 })
             })

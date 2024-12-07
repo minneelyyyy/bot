@@ -10,17 +10,19 @@ pub async fn give(ctx: Context<'_>, user: serenity::User, #[min = 1] amount: i32
     }
 
     let data = ctx.data();
+    let mut db = data.database.lock().await;
+    let db = db.as_mut();
 
-    let author_balance = super::get_balance(ctx.author().id, &data).await?;
+    let author_balance = super::get_balance(ctx.author().id, db).await?;
 
     if author_balance < amount {
         ctx.reply(format!("You do not have a high enough balance (**{author_balance}**) to complete this transaction.")).await?;
     } else {
         let author_new_balance = author_balance - amount;
-        let reciever_new_balance = super::get_balance(user.id, &data).await? + amount;
+        let reciever_new_balance = super::get_balance(user.id, db).await? + amount;
 
-        super::change_balance(user.id, reciever_new_balance, &data).await?;
-        super::change_balance(ctx.author().id, author_new_balance, data).await?;
+        super::change_balance(user.id, reciever_new_balance, db).await?;
+        super::change_balance(ctx.author().id, author_new_balance, db).await?;
 
         ctx.reply(format!("You've given **{}** **{}** tokens!", user.display_name(), amount)).await?;
     }
