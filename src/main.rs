@@ -7,12 +7,13 @@ use crate::common::{Context, Error, Data};
 use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
-use std::time::{Instant, Duration};
 
-use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::{self as serenity};
 use tokio::sync::Mutex;
 
 use clap::Parser;
+
+use sqlx::postgres::PgPoolOptions;
 
 #[derive(Parser, Debug)]
 struct BotArgs {
@@ -29,28 +30,9 @@ async fn event_handler(
 ) -> Result<(), Error> {
     match event {
         serenity::FullEvent::Message { new_message: message } => {
-            let mentions = ping_limit::extract_mentions(&message.content);
-            let mut cooldowns = data.mentions.lock().await;
+            if message.author.bot { return Ok(()) }
 
-            if mentions.iter()
-                .filter(|&&id| id != message.author.id)
-                .any(|mention| cooldowns.get(mention).map(|t| Instant::now().duration_since(*t) < Duration::from_secs(20)).unwrap_or(false))
-            {
-                message.reply(ctx, "stop spamming!").await?;
-
-                let guild = match message.guild_id {
-                    Some(g) => g,
-                    None => return Ok(()),
-                };
-
-                let mut member = guild.member(ctx, message.author.id).await.unwrap();
-                member.disable_communication_until_datetime(ctx,
-                    serenity::Timestamp::from_unix_timestamp(serenity::Timestamp::now().unix_timestamp() + 60 as i64).unwrap()).await?;
-            }
-
-            for mention in mentions {
-                cooldowns.insert(mention, Instant::now());
-            }
+            ping_limit::ping_spam_yeller(ctx, &message, data).await?;
         }
         _ => (),
     }
@@ -64,6 +46,7 @@ async fn main() -> Result<(), Error> {
     let args = BotArgs::parse();
 
     let token = env::var("DISCORD_BOT_TOKEN")?;
+    let database_url = env::var("DATABASE_URL")?;
     let intents = serenity::GatewayIntents::all();
 
     let framework = poise::Framework::builder()
@@ -84,8 +67,22 @@ async fn main() -> Result<(), Error> {
         .setup(|ctx, _ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
+
+                let database = PgPoolOptions::new()
+                    .max_connections(4)
+                    .connect(&database_url).await?;
+
+                sqlx::query(
+                    r#"
+                    CREATE TABLE IF NOT EXISTS bank (
+                        id BIGINT PRIMARY KEY,
+                        balance INT
+                    )
+                    "#,
+                ).execute(&database).await?;
+
                 Ok(Data {
-                    users: Arc::new(Mutex::new(HashMap::new())),
+                    database,
                     mentions: Arc::new(Mutex::new(HashMap::new())),
                 })
             })

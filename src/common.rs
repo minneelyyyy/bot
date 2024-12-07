@@ -2,9 +2,10 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use std::collections::HashMap;
 use poise::serenity_prelude::UserId;
+use sqlx::{Pool, Postgres};
 
 pub struct Data {
-    pub users: Arc<Mutex<HashMap<UserId, usize>>>,
+    pub database: Pool<Postgres>,
     pub mentions: Arc<Mutex<HashMap<UserId, std::time::Instant>>>,
 }
 

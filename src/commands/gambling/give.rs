@@ -1,30 +1,29 @@
 use crate::{Context, Error};
-use super::get_user_wealth_mut;
 use poise::serenity_prelude as serenity;
 
 /// Generously donate your tokens to someone else
 #[poise::command(slash_command, prefix_command)]
-pub async fn give(ctx: Context<'_>, user: serenity::User, amount: usize) -> Result<(), Error> {
+pub async fn give(ctx: Context<'_>, user: serenity::User, #[min = 1] amount: i32) -> Result<(), Error> {
     if user.bot {
-        ctx.reply("Don't waste your token(s) by giving them to a bot!").await?;
+        ctx.reply("Don't waste your tokens by giving them to a bot!").await?;
         return Ok(());
     }
 
-    let mut users = ctx.data().users.lock().await;
-    let author_wealth = get_user_wealth_mut(&mut users, ctx.author().id);
+    let data = ctx.data();
 
-    if *author_wealth < amount {
-        ctx.reply(format!("You only have **{}** token(s) and cannot give away **{}**.",
-                          *author_wealth, amount)).await?;
-        return Ok(());
+    let author_balance = super::get_balance(ctx.author().id, &data).await?;
+
+    if author_balance < amount {
+        ctx.reply(format!("You do not have a high enough balance (**{author_balance}**) to complete this transaction.")).await?;
+    } else {
+        let author_new_balance = author_balance - amount;
+        let reciever_new_balance = super::get_balance(user.id, &data).await? + amount;
+
+        super::change_balance(user.id, reciever_new_balance, &data).await?;
+        super::change_balance(ctx.author().id, author_new_balance, data).await?;
+
+        ctx.reply(format!("You've given **{}** **{}** tokens!", user.display_name(), amount)).await?;
     }
-
-    *author_wealth -= amount;
-
-    let receiver_wealth = get_user_wealth_mut(&mut users, user.id);
-    *receiver_wealth += amount;
-
-    ctx.reply(format!("You've given **{}** **{}** token(s).", user.name, amount)).await?;
 
     Ok(())
 }
