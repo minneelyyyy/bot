@@ -1,7 +1,6 @@
 use crate::{Context, Error};
 
 use std::time::{Duration, Instant};
-use poise::serenity_prelude as serenity;
 
 fn format_duration(duration: Duration) -> String {
     let total_seconds = duration.as_secs();
