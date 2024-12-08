@@ -3,6 +3,15 @@ use crate::{Context, Error};
 use std::time::{Duration, Instant};
 use poise::serenity_prelude as serenity;
 
+fn format_duration(duration: Duration) -> String {
+    let total_seconds = duration.as_secs();
+    let seconds = total_seconds % 60;
+    let minutes = (total_seconds / 60) % 60;
+    let hours = total_seconds / 3600;
+
+    format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
+}
+
 /// Redeem 50 daily tokens.
 #[poise::command(slash_command, prefix_command)]
 pub async fn daily(ctx: Context<'_>) -> Result<(), Error> {
@@ -23,7 +32,7 @@ pub async fn daily(ctx: Context<'_>) -> Result<(), Error> {
                 ctx.reply("Added **50** credits to your account!").await?;
             } else {
                 let until_next_daily = Duration::from_secs(10) - daily.elapsed();
-                ctx.reply(format!("Your daily will be available in {:?}.", until_next_daily)).await?;
+                ctx.reply(format!("Your daily will be available in {:?}.", format_duration(until_next_daily))).await?;
             }
         },
         None => {
