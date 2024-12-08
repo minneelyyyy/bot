@@ -8,6 +8,7 @@ mod whois;
 mod color;
 mod name;
 mod disown;
+mod remove;
 
 #[poise::command(
     prefix_command,
@@ -18,13 +19,14 @@ mod disown;
         "color::color",
         "name::name",
         "disown::disown",
+        "remove::remove",
     )
 )]
 pub async fn role(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn get_user_role(_ctx: Context<'_>, user: UserId, guild: GuildId, db: &mut PgConnection) -> Result<Option<RoleId>, Error> {
+pub async fn get_user_role(user: UserId, guild: GuildId, db: &mut PgConnection) -> Result<Option<RoleId>, Error> {
     match sqlx::query("SELECT roleid FROM selfroles WHERE userid = $1 AND guildid = $2")
         .bind(user.get() as i64)
         .bind(guild.get() as i64)

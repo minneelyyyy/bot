@@ -1,5 +1,5 @@
 
-use crate::common::{Context, Error};
+use crate::common::{self, Context, Error};
 
 use poise::serenity_prelude as serenity;
 use serenity::UserId;
@@ -31,7 +31,7 @@ pub async fn whois(ctx: Context<'_>, role: serenity::Role) -> Result<(), Error> 
 
         let member = guild.member(ctx, user).await?;
 
-        ctx.reply(format!("{} owns this role.", member.display_name())).await?;
+        common::no_ping_reply(&ctx, format!("{} owns this role.", member)).await?;
     } else {
         ctx.reply("This command must be used within a server!").await?;
     }

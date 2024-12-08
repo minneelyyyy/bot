@@ -9,7 +9,7 @@ pub async fn disown(ctx: Context<'_>) -> Result<(), Error> {
     let db = db.as_mut();
 
     if let Some(guild) = ctx.guild_id() {
-        if let Some(role) = super::get_user_role(ctx, ctx.author().id, guild, db).await? {
+        if let Some(role) = super::get_user_role(ctx.author().id, guild, db).await? {
             guild.delete_role(ctx, role).await?;
 
             sqlx::query("DELETE FROM selfroles WHERE roleid = $1")

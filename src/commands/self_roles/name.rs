@@ -11,7 +11,7 @@ pub async fn name(ctx: Context<'_>, name: String) -> Result<(), Error> {
     let db = db.as_mut();
 
     if let Some(guild) = ctx.guild_id() {
-        let role = match super::get_user_role(ctx, ctx.author().id, guild, db).await? {
+        let role = match super::get_user_role(ctx.author().id, guild, db).await? {
             Some(role) => role,
             None => {
                 let role = guild.create_role(ctx, EditRole::new().name(name)).await?;
@@ -32,8 +32,9 @@ pub async fn name(ctx: Context<'_>, name: String) -> Result<(), Error> {
         };
 
         guild.edit_role(ctx, role, EditRole::new().name(name)).await?;
+        let role = guild.role(ctx, role).await?;
 
-        ctx.reply("Your custom role's name has been updated!").await?;
+        ctx.reply(format!("Your custom role's name has been updated to {}.", role)).await?;
 
         Ok(())
     } else {

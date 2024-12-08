@@ -3,9 +3,9 @@ use crate::common::{self, Context, Error};
 
 use poise::serenity_prelude as serenity;
 
-/// Register an existing role as a user's custom role
+/// force remove someone's role (this does not delete the role)
 #[poise::command(slash_command, prefix_command, required_permissions = "MANAGE_ROLES")]
-pub async fn register(ctx: Context<'_>, user: serenity::User, role: serenity::Role) -> Result<(), Error> {
+pub async fn remove(ctx: Context<'_>, user: serenity::User) -> Result<(), Error> {
     let data = ctx.data();
     let mut db = data.database.lock().await;
     let db = db.as_mut();
@@ -13,21 +13,22 @@ pub async fn register(ctx: Context<'_>, user: serenity::User, role: serenity::Ro
     if let Some(guild) = ctx.guild_id() {
         match super::get_user_role(user.id, guild, db).await? {
             Some(role) => {
-                common::no_ping_reply(&ctx, format!("{} already has the role {} registered.", user, role)).await?;
-                Ok(())
-            },
-            None => {
-                sqlx::query("INSERT INTO selfroles (userid, guildid, roleid) VALUES ($1, $2, $3)")
+                sqlx::query("DELETE FROM selfroles WHERE userid = $1 AND guildid = $2")
                     .bind(user.id.get() as i64)
                     .bind(guild.get() as i64)
-                    .bind(role.id.get() as i64)
                     .execute(db).await?;
 
                 let member = guild.member(ctx, user.id).await?;
-                member.add_role(ctx, role.id).await?;
-        
-                common::no_ping_reply(&ctx, format!("{} now has {} set as their personal role.", user, role)).await?;
-        
+                
+                member.remove_role(ctx, role).await?;
+                let role = guild.role(ctx, role).await?;
+
+                common::no_ping_reply(&ctx, format!("{} has had {} removed.", user, role)).await?;
+
+                Ok(())
+            },
+            None => {
+                common::no_ping_reply(&ctx, format!("{} does not have a personal role to remove.", user)).await?;
                 Ok(())
             }
         }

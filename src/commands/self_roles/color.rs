@@ -20,8 +20,15 @@ pub async fn color(ctx: Context<'_>, color: String) -> Result<(), Error> {
     };
 
     if let Some(guild) = ctx.guild_id() {
-        let role = match super::get_user_role(ctx, ctx.author().id, guild, db).await? {
-            Some(role) => role,
+        match super::get_user_role(ctx.author().id, guild, db).await? {
+            Some(role) => {
+                guild.edit_role(ctx, role, EditRole::new().colour(Color::from_rgb(color.r, color.g, color.b))).await?;
+                let role = guild.role(ctx, role).await?;
+        
+                ctx.reply(format!("{}'s color has been updated!", role)).await?;
+        
+                Ok(())
+            },
             None => {
                 let role = guild.create_role(ctx,
                     EditRole::new()
@@ -40,13 +47,7 @@ pub async fn color(ctx: Context<'_>, color: String) -> Result<(), Error> {
                 ctx.reply(format!("You have been given the {} role!", role)).await?;
                 return Ok(());
             }
-        };
-
-        guild.edit_role(ctx, role, EditRole::new().colour(Color::from_rgb(color.r, color.g, color.b))).await?;
-
-        ctx.reply("Your custom role's color has been updated!").await?;
-
-        Ok(())
+        }
     } else {
         ctx.reply("This command must be run within a server.").await?;
         Ok(())

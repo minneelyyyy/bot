@@ -82,9 +82,10 @@ async fn main() -> Result<(), Error> {
                 sqlx::query(
                     r#"
                     CREATE TABLE IF NOT EXISTS selfroles (
-                        userid BIGINT,
+                        userid BIGINT NOT NULL,
+                        guildid BIGINT NOT NULL,
                         roleid BIGINT,
-                        guildid BIGINT
+                        UNIQUE (userid, guildid)
                     )
                     "#,
                 ).execute(&mut database).await?;
