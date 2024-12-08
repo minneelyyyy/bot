@@ -3,7 +3,6 @@ use crate::common::{Context, Error};
 use poise::serenity_prelude as serenity;
 use serenity::Colour;
 
-
 // this code uses Member::permissions, which while it is a deprecated function, it doesn't actually matter
 // since it is only used to display information to the user.
 #[allow(deprecated)]

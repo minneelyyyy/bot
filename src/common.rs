@@ -7,6 +7,9 @@ use sqlx::PgConnection;
 pub struct Data {
     pub database: Arc<Mutex<PgConnection>>,
     pub mentions: Arc<Mutex<HashMap<UserId, std::time::Instant>>>,
+
+    /// last time the user redeemed a daily
+    pub dailies: Arc<Mutex<HashMap<UserId, std::time::Instant>>>,
 }
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;

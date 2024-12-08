@@ -79,11 +79,22 @@ async fn main() -> Result<(), Error> {
                     "#,
                 ).execute(&mut database).await?;
 
+                sqlx::query(
+                    r#"
+                    CREATE TABLE IF NOT EXISTS selfroles (
+                        userid BIGINT PRIMARY KEY,
+                        roleid BIGINT,
+                        guildid BIGINT
+                    )
+                    "#,
+                ).execute(&mut database).await?;
+
                 println!("Bot is ready!");
 
                 Ok(Data {
                     database: Arc::new(Mutex::new(database)),
                     mentions: Arc::new(Mutex::new(HashMap::new())),
+                    dailies: Arc::new(Mutex::new(HashMap::new())),
                 })
             })
         })

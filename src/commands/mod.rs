@@ -18,5 +18,6 @@ pub fn commands() -> Vec<Command<Data, Error>> {
         gambling::wager::wager(),
         gambling::daily::daily(),
         eval::eval(),
+        self_roles::role(),
     ]
 }

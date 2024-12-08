@@ -30,8 +30,8 @@ pub async fn daily(ctx: Context<'_>) -> Result<(), Error> {
                 super::add_balance(id, 50, db).await?;
                 ctx.reply("Added **50** credits to your account!").await?;
             } else {
-                let until_next_daily = Duration::from_secs(10) - daily.elapsed();
-                ctx.reply(format!("Your daily will be available in {:?}.", format_duration(until_next_daily))).await?;
+                let until_next_daily = Duration::from_secs(24 * 60 * 60) - daily.elapsed();
+                ctx.reply(format!("Your next daily will be available in **{}**.", format_duration(until_next_daily))).await?;
             }
         },
         None => {
