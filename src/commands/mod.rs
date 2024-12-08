@@ -6,6 +6,7 @@ mod dox;
 mod yeehaw;
 mod gambling;
 mod eval;
+mod self_roles;
 
 pub fn commands() -> Vec<Command<Data, Error>> {
     vec![
@@ -15,6 +16,7 @@ pub fn commands() -> Vec<Command<Data, Error>> {
         gambling::balance::balance(),
         gambling::give::give(),
         gambling::wager::wager(),
+        gambling::daily::daily(),
         eval::eval(),
     ]
 }

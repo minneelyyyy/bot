@@ -2,6 +2,7 @@
 pub mod balance;
 pub mod give;
 pub mod wager;
+pub mod daily;
 
 use crate::common::Error;
 use poise::serenity_prelude::UserId;
@@ -27,5 +28,11 @@ pub async fn change_balance(id: UserId, balance: i32, db: &mut PgConnection) -> 
         .bind(balance)
         .execute(db).await?;
 
+    Ok(())
+}
+
+pub async fn add_balance(id: UserId, amount: i32, db: &mut PgConnection) -> Result<(), Error> {
+    let balance = get_balance(id, db).await?;
+    change_balance(id, balance + amount, db).await?;
     Ok(())
 }
