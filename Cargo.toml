@@ -12,3 +12,5 @@ clap = { version = "4.5.20", features = ["derive"] }
 lamm = { git = "https://github.com/minneelyyyy/lamm", branch = "dev" }
 regex = "1.11.1"
 sqlx = { version = "0.8", features = [ "runtime-tokio-native-tls", "postgres" ] }
+chrono = "0.4.38"
+hex_color = "3"
