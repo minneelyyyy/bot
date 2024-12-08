@@ -82,7 +82,7 @@ async fn main() -> Result<(), Error> {
                 sqlx::query(
                     r#"
                     CREATE TABLE IF NOT EXISTS selfroles (
-                        userid BIGINT PRIMARY KEY,
+                        userid BIGINT,
                         roleid BIGINT,
                         guildid BIGINT
                     )
