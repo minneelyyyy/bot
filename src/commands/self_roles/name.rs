@@ -34,7 +34,7 @@ pub async fn name(ctx: Context<'_>, name: String) -> Result<(), Error> {
         guild.edit_role(ctx, role, EditRole::new().name(name)).await?;
         let role = guild.role(ctx, role).await?;
 
-        ctx.reply(format!("Your custom role's name has been updated to {}.", role)).await?;
+        ctx.reply(format!("{} has been updated.", role)).await?;
 
         Ok(())
     } else {

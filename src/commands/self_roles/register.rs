@@ -13,6 +13,7 @@ pub async fn register(ctx: Context<'_>, user: serenity::User, role: serenity::Ro
     if let Some(guild) = ctx.guild_id() {
         match super::get_user_role(user.id, guild, db).await? {
             Some(role) => {
+                let role = guild.role(ctx, role).await?;
                 common::no_ping_reply(&ctx, format!("{} already has the role {} registered.", user, role)).await?;
                 Ok(())
             },
