@@ -29,6 +29,10 @@ pub async fn color(ctx: Context<'_>, color: String) -> Result<(), Error> {
         "light grey" | "light gray" => colours::roles::LIGHT_GREY,
         "dark grey" | "dark gray" => colours::roles::DARK_GREY,
         "darker grey" | "darker gray" => colours::roles::DARKER_GREY,
+        "white" => Color::new(0xffffff),
+        "black" => Color::new(0x010101),
+        "blurple" => Color::BLURPLE,
+        "yellow" => Color::new(0xe4f10a),
         hex => match HexColor::parse_rgb(hex) {
             Ok(color) => Color::from_rgb(color.r, color.g, color.b),
             Err(_) => {
