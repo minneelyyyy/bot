@@ -4,7 +4,7 @@ use poise::serenity_prelude::UserId;
 use sqlx::Row;
 
 /// Display a leaderboard of the top 10 wealthiest players
-#[poise::command(slash_command, prefix_command)]
+#[poise::command(slash_command, prefix_command, aliases("lb"))]
 pub async fn leaderboard(ctx: Context<'_>) -> Result<(), Error> {
     let db = &ctx.data().database;
 
