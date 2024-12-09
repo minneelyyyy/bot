@@ -4,14 +4,17 @@ use crate::common::{Context, Error};
 #[poise::command(slash_command, prefix_command)]
 pub async fn wager(
     ctx: Context<'_>,
-    #[min = 1]
     amount: i32) -> Result<(), Error>
 {
-    let data = ctx.data();
-    let mut db = data.database.lock().await;
-    let db = db.as_mut();
+    // #[min = 1] does not appear to work with prefix commands
+    if amount < 1 {
+        ctx.reply("you cannot wager less than 1 token.").await?;
+        return Ok(());
+    }
 
-    let mut wealth = super::get_balance(ctx.author().id, db).await?;
+    let mut tx = ctx.data().database.begin().await?;
+
+    let mut wealth = super::get_balance(ctx.author().id, &mut *tx).await?;
 
     if wealth < amount {
         ctx.reply(format!("You do not have enough tokens (**{}**) to wager this amount.",
@@ -29,7 +32,9 @@ pub async fn wager(
                           amount, wealth)).await?;
     }
 
-    super::change_balance(ctx.author().id, wealth, db).await?;
+    super::change_balance(ctx.author().id, wealth, &mut *tx).await?;
+
+    tx.commit().await?;
 
     Ok(())
 }

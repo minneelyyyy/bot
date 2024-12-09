@@ -42,12 +42,10 @@ pub async fn color(ctx: Context<'_>, color: String) -> Result<(), Error> {
         }
     };
 
-    let data = ctx.data();
-    let mut db = data.database.lock().await;
-    let db = db.as_mut();
+    let mut tx = ctx.data().database.begin().await?;
 
     if let Some(guild) = ctx.guild_id() {
-        match super::get_user_role(ctx.author().id, guild, db).await? {
+        match super::get_user_role(ctx.author().id, guild, &mut *tx).await? {
             Some(role) => {
                 guild.edit_role(ctx, role, EditRole::new().colour(color)).await?;
                 let role = guild.role(ctx, role).await?;
@@ -66,7 +64,7 @@ pub async fn color(ctx: Context<'_>, color: String) -> Result<(), Error> {
                     .bind(ctx.author().id.get() as i64)
                     .bind(role.id.get() as i64)
                     .bind(guild.get() as i64)
-                    .execute(db).await?;
+                    .execute(&mut *tx).await?;
 
                 let member = guild.member(ctx, ctx.author().id).await?;
                 member.add_role(ctx, role.clone()).await?;

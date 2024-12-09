@@ -9,11 +9,11 @@ use std::env;
 use std::sync::Arc;
 
 use poise::serenity_prelude::{self as serenity};
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
 
 use clap::Parser;
 
-use sqlx::{PgConnection, Connection};
+use sqlx::postgres::PgPoolOptions;
 
 #[derive(Parser, Debug)]
 struct BotArgs {
@@ -68,7 +68,9 @@ async fn main() -> Result<(), Error> {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
 
-                let mut database = PgConnection::connect(&database_url).await?;
+                let database = PgPoolOptions::new()
+                    .max_connections(5)
+                    .connect(&database_url).await?;
 
                 sqlx::query(
                     r#"
@@ -77,7 +79,7 @@ async fn main() -> Result<(), Error> {
                         balance INT
                     )
                     "#,
-                ).execute(&mut database).await?;
+                ).execute(&database).await?;
 
                 sqlx::query(
                     r#"
@@ -88,14 +90,14 @@ async fn main() -> Result<(), Error> {
                         UNIQUE (userid, guildid)
                     )
                     "#,
-                ).execute(&mut database).await?;
+                ).execute(&database).await?;
 
                 println!("Bot is ready!");
 
                 Ok(Data {
-                    database: Arc::new(Mutex::new(database)),
+                    database,
                     mentions: Arc::new(Mutex::new(HashMap::new())),
-                    dailies: Arc::new(Mutex::new(HashMap::new())),
+                    dailies: Arc::new(RwLock::new(HashMap::new())),
                 })
             })
         })

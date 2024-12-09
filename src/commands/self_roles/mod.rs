@@ -1,6 +1,6 @@
 
 use crate::common::{Context, Error};
-use sqlx::{PgConnection, Row};
+use sqlx::{PgExecutor, Row};
 use poise::serenity_prelude::{RoleId, UserId, GuildId};
 
 mod register;
@@ -26,7 +26,10 @@ pub async fn role(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn get_user_role(user: UserId, guild: GuildId, db: &mut PgConnection) -> Result<Option<RoleId>, Error> {
+pub async fn get_user_role<'a, E>(user: UserId, guild: GuildId, db: E) -> Result<Option<RoleId>, Error>
+where
+    E: PgExecutor<'a>,
+{
     match sqlx::query("SELECT roleid FROM selfroles WHERE userid = $1 AND guildid = $2")
         .bind(user.get() as i64)
         .bind(guild.get() as i64)

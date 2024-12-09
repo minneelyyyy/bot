@@ -1,15 +1,15 @@
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
 use std::collections::HashMap;
 use poise::{serenity_prelude::UserId, ReplyHandle};
-use sqlx::PgConnection;
+use sqlx::{Pool, Postgres};
 
 pub struct Data {
-    pub database: Arc<Mutex<PgConnection>>,
+    pub database: Pool<Postgres>,
     pub mentions: Arc<Mutex<HashMap<UserId, std::time::Instant>>>,
 
     /// last time the user redeemed a daily
-    pub dailies: Arc<Mutex<HashMap<UserId, std::time::Instant>>>,
+    pub dailies: Arc<RwLock<HashMap<UserId, std::time::Instant>>>,
 }
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;

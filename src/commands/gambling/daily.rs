@@ -15,30 +15,26 @@ fn format_duration(duration: Duration) -> String {
 #[poise::command(slash_command, prefix_command)]
 pub async fn daily(ctx: Context<'_>) -> Result<(), Error> {
     let data = ctx.data();
-    let mut db = data.database.lock().await;
-    let db = db.as_mut();
+    let user = ctx.author().id;
 
-    let id = ctx.author().id;
+    let day_ago = Instant::now() - Duration::from_secs(24 * 60 * 60);
+    let last = *data.dailies.read().await.get(&user).unwrap_or(&day_ago);
 
-    let mut dailies = data.dailies.lock().await;
+    if last <= day_ago {
+        data.dailies.write().await.insert(user, Instant::now());
 
-    match dailies.get_mut(&id) {
-        Some(daily) => {
-            
-            if daily.elapsed() >= Duration::from_secs(24 * 60 * 60) {
-                *daily = Instant::now();
-                super::add_balance(id, 50, db).await?;
-                ctx.reply("Added **50** credits to your account!").await?;
-            } else {
-                let until_next_daily = Duration::from_secs(24 * 60 * 60) - daily.elapsed();
-                ctx.reply(format!("Your next daily will be available in **{}**.", format_duration(until_next_daily))).await?;
-            }
-        },
-        None => {
-            dailies.insert(id.clone(), Instant::now());
-            super::add_balance(id, 50, db).await?;
-            ctx.reply("Added **50** credits to your account!").await?;
-        }
+        let db = &data.database;
+        let mut tx = db.begin().await?;
+
+        let bal = super::get_balance(user, &mut *tx).await?;
+        super::change_balance(user, bal + 50, &mut *tx).await?;
+
+        tx.commit().await?;
+
+        ctx.reply(format!("**50** tokens have been added to your balance.")).await?;
+    } else {
+        let next = Duration::from_secs(24 * 60 * 60) - last.elapsed();
+        ctx.reply(format!("Your next daily will be available in **{}**.", format_duration(next))).await?;
     }
 
     Ok(())

@@ -8,9 +8,7 @@ use sqlx::Row;
 /// Let you know who is the owner of a role.
 #[poise::command(slash_command, prefix_command)]
 pub async fn whois(ctx: Context<'_>, role: serenity::Role) -> Result<(), Error> {
-    let data = ctx.data();
-    let mut db = data.database.lock().await;
-    let db = db.as_mut();
+    let db = &ctx.data().database;
 
     if let Some(guild) = ctx.guild_id() {
         let row = match sqlx::query("SELECT userid FROM selfroles WHERE roleid = $1")

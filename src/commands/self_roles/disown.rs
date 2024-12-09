@@ -4,9 +4,7 @@ use crate::common::{Context, Error};
 /// Remove and delete your personal role
 #[poise::command(slash_command, prefix_command)]
 pub async fn disown(ctx: Context<'_>) -> Result<(), Error> {
-    let data = ctx.data();
-    let mut db = data.database.lock().await;
-    let db = db.as_mut();
+    let db = &ctx.data().database;
 
     if let Some(guild) = ctx.guild_id() {
         if let Some(role) = super::get_user_role(ctx.author().id, guild, db).await? {

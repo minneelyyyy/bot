@@ -6,9 +6,7 @@ use poise::serenity_prelude as serenity;
 /// force remove someone's role (this does not delete the role)
 #[poise::command(slash_command, prefix_command, required_permissions = "MANAGE_ROLES")]
 pub async fn remove(ctx: Context<'_>, user: serenity::User) -> Result<(), Error> {
-    let data = ctx.data();
-    let mut db = data.database.lock().await;
-    let db = db.as_mut();
+    let db = &ctx.data().database;
 
     if let Some(guild) = ctx.guild_id() {
         match super::get_user_role(user.id, guild, db).await? {

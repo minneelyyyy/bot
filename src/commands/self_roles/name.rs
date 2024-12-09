@@ -6,9 +6,7 @@ use poise::serenity_prelude::EditRole;
 /// Change the name of your personal role
 #[poise::command(slash_command, prefix_command)]
 pub async fn name(ctx: Context<'_>, name: String) -> Result<(), Error> {
-    let data = ctx.data();
-    let mut db = data.database.lock().await;
-    let db = db.as_mut();
+    let db = &ctx.data().database;
 
     if let Some(guild) = ctx.guild_id() {
         let role = match super::get_user_role(ctx.author().id, guild, db).await? {
