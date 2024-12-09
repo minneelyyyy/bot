@@ -46,12 +46,7 @@ async fn autocomplete_colors<'a>(
     _ctx: Context<'_>,
     partial: &'a str,
 ) -> impl Iterator<Item = &'static str> + use<'a> {
-    COLORS.clone().into_keys().filter(move |x|
-        x.starts_with(partial)
-        || x.starts_with(&format!("light {partial}"))
-        || x.starts_with(&format!("lighter {partial}"))
-        || x.starts_with(&format!("dark {partial}"))
-        || x.starts_with(&format!("darker {partial}")))
+    COLORS.clone().into_keys().filter(move |x| x.split_whitespace().any(|x| x.starts_with(partial)))
 }
 
 /// Change the color of your personal role
