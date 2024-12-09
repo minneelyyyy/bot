@@ -1,5 +1,4 @@
 mod commands;
-mod ping_limit;
 
 pub mod common;
 use crate::common::{Context, Error, Data};
@@ -31,8 +30,6 @@ async fn event_handler(
     match event {
         serenity::FullEvent::Message { new_message: message } => {
             if message.author.bot { return Ok(()) }
-
-            ping_limit::ping_spam_yeller(ctx, &message, data).await?;
         }
         _ => (),
     }
