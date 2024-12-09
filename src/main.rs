@@ -22,10 +22,10 @@ struct BotArgs {
 }
 
 async fn event_handler(
-    ctx: &serenity::Context,
+    _ctx: &serenity::Context,
     event: &serenity::FullEvent,
     _framework: poise::FrameworkContext<'_, Data, Error>,
-    data: &Data,
+    _data: &Data,
 ) -> Result<(), Error> {
     match event {
         serenity::FullEvent::Message { new_message: message } => {
