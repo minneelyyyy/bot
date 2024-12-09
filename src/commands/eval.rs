@@ -2,7 +2,7 @@ use crate::common::{Context, Error};
 use std::io::Cursor;
 
 /// Evaluates a Lamm program
-#[poise::command(slash_command, prefix_command)]
+#[poise::command(slash_command, prefix_command, aliases("lamm"))]
 pub async fn eval(ctx: Context<'_>,
                   #[rest]
                   expr: String) -> Result<(), Error>
