@@ -4,13 +4,10 @@ pub mod common;
 pub mod inventory;
 use crate::common::{Context, Error, Data};
 
-use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
 
 use poise::serenity_prelude::{self as serenity};
-use tokio::sync::{Mutex, RwLock};
-
 use clap::Parser;
 
 use sqlx::postgres::PgPoolOptions;
@@ -112,13 +109,19 @@ async fn main() -> Result<(), Error> {
                     "#
                 ).execute(&database).await?;
 
+                sqlx::query(
+                    r#"
+                    CREATE TABLE IF NOT EXISTS dailies (
+                        userid BIGINT NOT NULL PRIMARY KEY,
+                        last TIMESTAMPTZ,
+                        streak INT
+                    )
+                    "#
+                ).execute(&database).await?;
+
                 println!("Bot is ready!");
 
-                Ok(Data {
-                    database,
-                    mentions: Arc::new(Mutex::new(HashMap::new())),
-                    dailies: Arc::new(RwLock::new(HashMap::new())),
-                })
+                Ok(Data { database })
             })
         })
         .build();
