@@ -17,11 +17,10 @@ pub async fn wager(
     }
 
     let mut tx = ctx.data().database.begin().await?;
-    let mut wealth = super::get_balance(ctx.author().id, &mut *tx).await?;
+    let mut balance = super::get_balance(ctx.author().id, &mut *tx).await?;
 
-    if wealth < amount {
-        ctx.reply(format!("You do not have enough tokens (**{}**) to wager this amount.",
-                          wealth)).await?;
+    if balance < amount {
+        ctx.reply(format!("You do not have enough tokens (**{balance}**) to wager this amount.")).await?;
         return Ok(());
     }
 
@@ -57,16 +56,16 @@ pub async fn wager(
 
     if rand::thread_rng().gen_bool(chance) {
         let win = (amount as f64 * multiplier) as i32;
-        wealth += win;
+        balance += win;
         ctx.reply(format!("You just gained **{}** token(s)! You now have **{}**.",
-                          win, wealth)).await?;
+                          win, balance)).await?;
     } else {
-        wealth -= amount;
+        balance -= amount;
         ctx.reply(format!("You've lost **{}** token(s), you now have **{}**.",
-                          amount, wealth)).await?;
+                          amount, balance)).await?;
     }
 
-    super::change_balance(ctx.author().id, wealth, &mut *tx).await?;
+    super::change_balance(ctx.author().id, balance, &mut *tx).await?;
 
     tx.commit().await?;
 
