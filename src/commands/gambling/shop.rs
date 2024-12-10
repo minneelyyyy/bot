@@ -49,9 +49,9 @@ pub async fn buy(ctx: Context<'_>,
         return Ok(());
     }
 
-    let mut tx = ctx.data().database.begin().await?;
-
     if let Some((price, &ref item)) = ITEMS.get(item.as_str()) {
+        let mut tx = ctx.data().database.begin().await?;
+
         let author = ctx.author();
         let balance = super::get_balance(author.id, &mut *tx).await?;
 
@@ -69,9 +69,9 @@ pub async fn buy(ctx: Context<'_>,
         }
 
         super::change_balance(author.id, balance - total, &mut *tx).await?;
+        tx.commit().await?;
 
         ctx.reply(format!("You have purchased {count}x {}.", item.name)).await?;
-        tx.commit().await?;
     } else {
         ctx.reply(format!("The item {item} is not available in this shop.")).await?;
     }
