@@ -57,6 +57,7 @@ where
     Ok(())
 }
 
+/// Tells you what your current daily streak is
 #[poise::command(slash_command, prefix_command)]
 pub async fn streak(ctx: Context<'_>) -> Result<(), Error> {
     let db = &ctx.data().database;
@@ -120,6 +121,7 @@ async fn do_claim(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+// Redeem daily tokens.
 #[poise::command(slash_command, prefix_command)]
 pub async fn claim(ctx: Context<'_>) -> Result<(), Error> {
     do_claim(ctx).await
