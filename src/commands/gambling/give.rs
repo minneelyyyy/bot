@@ -14,6 +14,11 @@ pub async fn give(ctx: Context<'_>, user: serenity::User, #[min = 1] amount: i32
         return Ok(());
     }
 
+    if user == *ctx.author() {
+        ctx.reply("You cannot give yourself money!").await?;
+        return Ok(());
+    }
+
     let mut tx = ctx.data().database.begin().await?;
 
     let author_balance = super::get_balance(ctx.author().id, &mut *tx).await?;
