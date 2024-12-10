@@ -1,4 +1,3 @@
-use crate::{Data, Error};
 use poise::Command;
 
 mod ping;
@@ -7,6 +6,8 @@ mod yeehaw;
 mod gambling;
 mod eval;
 mod self_roles;
+
+use crate::common::{Data, Error};
 
 pub fn commands() -> Vec<Command<Data, Error>> {
     vec![
@@ -18,6 +19,7 @@ pub fn commands() -> Vec<Command<Data, Error>> {
         gambling::wager::wager(),
         gambling::daily::daily(),
         gambling::leaderboard::leaderboard(),
+        gambling::shop::buy(),
         eval::eval(),
         self_roles::role(),
     ]

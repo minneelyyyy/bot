@@ -1,6 +1,7 @@
 mod commands;
 
 pub mod common;
+pub mod inventory;
 use crate::common::{Context, Error, Data};
 
 use std::collections::HashMap;
@@ -87,6 +88,28 @@ async fn main() -> Result<(), Error> {
                         UNIQUE (userid, guildid)
                     )
                     "#,
+                ).execute(&database).await?;
+
+                sqlx::query(
+                    r#"
+                    CREATE TABLE IF NOT EXISTS games (
+                        id BIGSERIAL PRIMARY KEY,
+                        name CHAR[255]
+                    )
+                    "#
+                ).execute(&database).await?;
+
+                sqlx::query(
+                    r#"
+                    CREATE TABLE IF NOT EXISTS items (
+                        id BIGSERIAL PRIMARY KEY,
+                        owner BIGINT NOT NULL,
+                        game BIGINT NOT NULL,
+                        item BIGINT NOT NULL,
+                        data JSON NOT NULL,
+                        name TEXT
+                    )
+                    "#
                 ).execute(&database).await?;
 
                 println!("Bot is ready!");
