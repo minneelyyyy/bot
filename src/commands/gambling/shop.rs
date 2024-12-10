@@ -68,7 +68,6 @@ pub async fn buy(ctx: Context<'_>,
             inventory.give_item(&mut *tx, item.clone().inv_item()).await?;
         }
 
-        let balance = super::get_balance(author.id, &mut *tx).await?;
         super::change_balance(author.id, balance - total, &mut *tx).await?;
 
         ctx.reply(format!("You have purchased {count}x {}.", item.name)).await?;
