@@ -59,9 +59,9 @@ pub async fn color(ctx: Context<'_>, #[autocomplete = "autocomplete_colors"] col
         Color::from_rgb(rgb.r, rgb.g, rgb.b)
     };
 
-    let mut tx = ctx.data().database.begin().await?;
-
     if let Some(guild) = ctx.guild_id() {
+        let mut tx = ctx.data().database.begin().await?;
+
         match super::get_user_role(ctx.author().id, guild, &mut *tx).await? {
             Some(role) => {
                 guild.edit_role(ctx, role, EditRole::new().colour(color)).await?;
@@ -82,13 +82,14 @@ pub async fn color(ctx: Context<'_>, #[autocomplete = "autocomplete_colors"] col
                     .bind(role.id.get() as i64)
                     .bind(guild.get() as i64)
                     .execute(&mut *tx).await?;
+                
+                tx.commit().await?;
 
                 let member = guild.member(ctx, ctx.author().id).await?;
                 member.add_role(ctx, role.clone()).await?;
 
                 ctx.reply(format!("You have been given the {} role!", role)).await?;
 
-                tx.commit().await?;
                 return Ok(());
             }
         }
