@@ -39,7 +39,6 @@ async fn autocomplete_shop<'a>(
 pub async fn buy(ctx: Context<'_>,
     #[autocomplete = "autocomplete_shop"]
     item: String,
-    #[min = 1]
     count: Option<i32>) -> Result<(), Error>
 {
     let count = count.unwrap_or(1);
