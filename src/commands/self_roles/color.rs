@@ -87,6 +87,8 @@ pub async fn color(ctx: Context<'_>, #[autocomplete = "autocomplete_colors"] col
                 member.add_role(ctx, role.clone()).await?;
 
                 ctx.reply(format!("You have been given the {} role!", role)).await?;
+
+                tx.commit().await?;
                 return Ok(());
             }
         }
