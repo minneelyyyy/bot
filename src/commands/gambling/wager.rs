@@ -17,8 +17,13 @@ pub async fn wager(
     }
 
     let mut tx = ctx.data().database.begin().await?;
-
     let mut wealth = super::get_balance(ctx.author().id, &mut *tx).await?;
+
+    if wealth < amount {
+        ctx.reply(format!("You do not have enough tokens (**{}**) to wager this amount.",
+                          wealth)).await?;
+        return Ok(());
+    }
 
     let item = if let Some(item) = item {
         let inventory = Inventory::new(ctx.author().id, Some(super::ID));
@@ -43,21 +48,12 @@ pub async fn wager(
         None
     };
 
-    if wealth < amount {
-        ctx.reply(format!("You do not have enough tokens (**{}**) to wager this amount.",
-                          wealth)).await?;
-        return Ok(());
-    }
-
-    let multiplier = item.clone().map(|item| item.effects.iter().fold(1.0, |acc, effect| match effect {
-        Effect::Multiplier(c) => *c,
-        _ => acc,
-    })).unwrap_or(1.0);
-
-    let chance = item.map(|item| item.effects.iter().fold(0.5, |acc, effect| match effect {
-        Effect::Chance(c) => *c,
-        _ => acc,
-    })).unwrap_or(0.5);
+    let (multiplier, chance) = item.map(|item| item.effects.iter()
+        .fold((1.0, 0.5), |(m, c), effect| match effect {
+            Effect::Multiplier(m) => (*m, c),
+            Effect::Chance(c) => (m, *c),
+        })
+    ).unwrap_or((1.0, 0.5));
 
     if rand::thread_rng().gen_bool(chance) {
         let win = (amount as f64 * multiplier) as i32;
