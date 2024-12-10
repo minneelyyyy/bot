@@ -6,18 +6,43 @@ use rand::Rng;
 #[poise::command(slash_command, prefix_command, aliases("w"))]
 pub async fn wager(
     ctx: Context<'_>,
-    amount: i32,
+    amount: String,
     #[autocomplete = "super::autocomplete_inventory"]
     item: Option<String>) -> Result<(), Error>
 {
-    // #[min = 1] does not appear to work with prefix commands
-    if amount < 1 {
-        ctx.reply("you cannot wager less than 1 token.").await?;
-        return Ok(());
-    }
-
     let mut tx = ctx.data().database.begin().await?;
     let mut balance = super::get_balance(ctx.author().id, &mut *tx).await?;
+
+    let amount = match amount.to_lowercase().as_str() {
+        "all" => balance,
+        "half" => balance / 2,
+        input => {
+            if input.ends_with('%') {
+                let percent: f64 = match input[..input.len() - 1].parse::<f64>() {
+                    Ok(x) => x,
+                    Err(_) => {
+                        ctx.reply(format!("{input} is not a valid percent.")).await?;
+                        return Ok(());
+                    }
+                } / 100f64;
+
+                (balance as f64 * percent) as i32
+            } else {
+                match input.parse() {
+                    Ok(n) => n,
+                    Err(_) => {
+                        ctx.reply("Any one of a number, all, half, or a percent are allowed as arguments.").await?;
+                        return Ok(());
+                    }
+                }
+            }
+        }
+    };
+
+    if amount < 1 {
+        ctx.reply("You cannot wager less than 1 token.").await?;
+        return Ok(());
+    }
 
     if balance < amount {
         ctx.reply(format!("You do not have enough tokens (**{balance}**) to wager this amount.")).await?;
