@@ -208,9 +208,12 @@ dependencies = [
  "dotenv",
  "hex_color",
  "lamm",
+ "once_cell",
  "poise",
  "rand",
  "regex",
+ "serde",
+ "serde_json",
  "sqlx",
  "tokio",
 ]
