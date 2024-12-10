@@ -3,7 +3,7 @@ use super::Effect;
 use rand::Rng;
 
 /// Put forward an amount of tokens to either lose or earn
-#[poise::command(slash_command, prefix_command)]
+#[poise::command(slash_command, prefix_command, aliases("w"))]
 pub async fn wager(
     ctx: Context<'_>,
     amount: i32,
