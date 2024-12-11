@@ -1,4 +1,4 @@
-use crate::{Context, Error};
+use crate::{Context, Error, common};
 use poise::serenity_prelude as serenity;
 
 /// Generously donate your tokens to someone else
@@ -29,7 +29,7 @@ pub async fn give(ctx: Context<'_>, user: serenity::User, amount: i32) -> Result
         super::change_balance(ctx.author().id, balance - amount, &mut *tx).await?;
         tx.commit().await?;
 
-        ctx.reply(format!("You've given **{}** **{}** tokens!", user.display_name(), amount)).await?;
+        common::no_ping_reply(&ctx, format!("You've given {} **{}** tokens!", user, amount)).await?;
     }
 
     Ok(())
