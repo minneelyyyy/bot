@@ -1,7 +1,7 @@
 use crate::{Context, Error};
 
 use poise::serenity_prelude::UserId;
-use sqlx::{types::chrono::{DateTime, Local, TimeZone}, PgExecutor, Row};
+use sqlx::{types::chrono::{DateTime, Utc, TimeZone}, PgExecutor, Row};
 
 use std::time::Duration;
 
@@ -31,7 +31,7 @@ where
     Ok(())
 }
 
-async fn get_last<'a, E>(db: E, user: UserId) -> Result<Option<DateTime<Local>>, Error>
+async fn get_last<'a, E>(db: E, user: UserId) -> Result<Option<DateTime<Utc>>, Error>
 where
     E: PgExecutor<'a>,
 {
@@ -45,7 +45,7 @@ where
     }
 }
 
-async fn set_last<'a, E>(db: E, user: UserId, last: DateTime<Local>) -> Result<(), Error>
+async fn set_last<'a, E>(db: E, user: UserId, last: DateTime<Utc>) -> Result<(), Error>
 where
     E: PgExecutor<'a>,
 {
@@ -73,9 +73,9 @@ async fn do_claim(ctx: Context<'_>) -> Result<(), Error> {
 
     let last = get_last(&mut *tx, user).await?;
     let existed = last.is_some();
-    let last = last.unwrap_or(Local.timestamp_opt(0, 0).unwrap());
+    let last = last.unwrap_or(Utc.timestamp_opt(0, 0).unwrap());
 
-    let now = Local::now();
+    let now = Utc::now();
     let next_daily = last + Duration::from_secs(24 * 60 * 60);
     let time_to_redeem = next_daily + Duration::from_secs(24 * 60 * 60);
 
@@ -104,7 +104,7 @@ async fn do_claim(ctx: Context<'_>) -> Result<(), Error> {
         }
 
         let payout = 50 + 10 * streak.min(7);
-        
+
         let balance = super::get_balance(user, &mut *tx).await?;
         super::change_balance(user, balance + payout, &mut *tx).await?;
 
@@ -115,7 +115,7 @@ async fn do_claim(ctx: Context<'_>) -> Result<(), Error> {
 
         ctx.reply(format!("{begin}**{payout}** tokens were added to your balance.{end}")).await?;
     } else {
-        ctx.reply(format!("Your next daily is not available! It will be available on {}.", next_daily.to_rfc2822())).await?;
+        ctx.reply(format!("Your next daily is not available! It will be available <t:{}:R>.", next_daily.timestamp())).await?;
     }
 
     Ok(())
