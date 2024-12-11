@@ -64,7 +64,7 @@ pub async fn wager(
                 Some(item)
             }
             None => {
-                ctx.reply("item {item} does not exist.").await?;
+                ctx.reply(format!("item {item} does not exist.")).await?;
                 return Ok(());
             }
         }
