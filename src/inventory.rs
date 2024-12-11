@@ -53,9 +53,9 @@ impl Inventory {
         let x = sqlx::query_as(
             r#"
             SELECT id, name, game, item, data FROM items
-            where item = $1
+            where item = $1 AND owner = $2
             "#
-        ).bind(item as i64).fetch_one(db).await.ok();
+        ).bind(item as i64).bind(self.user.get() as i64).fetch_one(db).await.ok();
 
         Ok(x)
     }
@@ -67,9 +67,9 @@ impl Inventory {
         let x = sqlx::query_as(
             r#"
             SELECT id, name, game, item, data FROM items
-            where name = $1
+            where name = $1 AND user = $2
             "#
-        ).bind(name).fetch_one(db).await.ok();
+        ).bind(name).bind(self.user.get() as i64).fetch_one(db).await.ok();
 
         Ok(x)
     }
