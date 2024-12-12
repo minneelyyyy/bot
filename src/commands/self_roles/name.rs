@@ -6,9 +6,9 @@ use poise::serenity_prelude::EditRole;
 /// Change the name of your personal role
 #[poise::command(slash_command, prefix_command)]
 pub async fn name(ctx: Context<'_>, name: String) -> Result<(), Error> {
-    let mut tx = ctx.data().database.begin().await?;
-
     if let Some(guild) = ctx.guild_id() {
+        let mut tx = ctx.data().database.begin().await?;
+
         let role = match super::get_user_role(ctx.author().id, guild, &mut *tx).await? {
             Some(role) => role,
             None => {
@@ -20,10 +20,10 @@ pub async fn name(ctx: Context<'_>, name: String) -> Result<(), Error> {
                     .bind(guild.get() as i64)
                     .execute(&mut *tx).await?;
 
+                tx.commit().await?;
+
                 let member = guild.member(ctx, ctx.author().id).await?;
                 member.add_role(ctx, role.clone()).await?;
-
-                tx.commit().await?;
 
                 ctx.reply(format!("You've been given the {} role!", role)).await?;
 
