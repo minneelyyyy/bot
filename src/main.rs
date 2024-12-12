@@ -42,7 +42,10 @@ async fn main() -> Result<(), Error> {
 
     let token = env::var("DISCORD_BOT_TOKEN")?;
     let database_url = env::var("DATABASE_URL")?;
-    let intents = serenity::GatewayIntents::all();
+    let intents =
+        serenity::GatewayIntents::GUILD_MESSAGES
+        | serenity::GatewayIntents::DIRECT_MESSAGES
+        | serenity::GatewayIntents::MESSAGE_CONTENT;
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
