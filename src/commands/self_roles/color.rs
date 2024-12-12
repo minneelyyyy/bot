@@ -39,6 +39,16 @@ static COLORS: Lazy<HashMap<&'static str, Color>> = Lazy::new(|| {
         ("black", Color::new(0x010101)),
         ("blurple", Color::BLURPLE),
         ("yellow", Color::new(0xe4f10a)),
+        ("cyan", Color::new(0xc58ffff)),
+        ("turqouise", Color::new(0x1bc6c6)),
+        ("pink", Color::new(0xffacac)),
+        ("hot pink", Color::new(0xa52a67)),
+        ("light orange", Color::new(0xffc88a)),
+        ("light yellow", Color::new(0xfbff8a)),
+        ("light green", Color::new(0xc1ff8a)),
+        ("light blue", Color::new(0x8afbff)),
+        ("light purple", Color::new(0xffc0f5)),
+        ("light cyan", Color::new(0xc0ffff)),
     ])
 });
 
