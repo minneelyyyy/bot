@@ -3,6 +3,7 @@ use sqlx::{Pool, Postgres};
 
 pub struct Data {
     pub database: Pool<Postgres>,
+    pub prefix: Option<String>,
 }
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;

@@ -8,9 +8,11 @@ use std::env;
 use std::sync::Arc;
 
 use poise::serenity_prelude::{self as serenity};
+use poise::PartialContext;
 use clap::Parser;
 
 use sqlx::postgres::PgPoolOptions;
+use sqlx::Row;
 
 #[derive(Parser, Debug)]
 struct BotArgs {
@@ -35,6 +37,22 @@ async fn event_handler(
     Ok(())
 }
 
+async fn get_prefix(ctx: PartialContext<'_, Data, Error>) -> Result<Option<String>, Error> {
+    let guild = match ctx.guild_id {
+        Some(guild) => guild,
+        None => return Ok(None),
+    };
+
+    let db = &ctx.data.database;
+
+    let prefix = sqlx::query("SELECT prefix FROM settings WHERE guildid = $1")
+        .bind(guild.get() as i64)
+        .fetch_one(db).await.ok()
+            .map(|x| x.get(0)).unwrap_or(ctx.data.prefix.clone());
+
+    Ok(prefix)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     dotenv::dotenv().ok();
@@ -42,16 +60,17 @@ async fn main() -> Result<(), Error> {
 
     let token = env::var("DISCORD_BOT_TOKEN")?;
     let database_url = env::var("DATABASE_URL")?;
-    let intents =
+    let intents = args.prefix.clone().map(|_|
         serenity::GatewayIntents::GUILD_MESSAGES
-        | serenity::GatewayIntents::DIRECT_MESSAGES
-        | serenity::GatewayIntents::MESSAGE_CONTENT;
+            | serenity::GatewayIntents::DIRECT_MESSAGES
+            | serenity::GatewayIntents::MESSAGE_CONTENT)
+        .unwrap_or(serenity::GatewayIntents::empty());
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
             commands: commands::commands(),
             prefix_options: poise::PrefixFrameworkOptions {
-                prefix: args.prefix,
+                dynamic_prefix: Some(|ctx| Box::pin(get_prefix(ctx))),
                 edit_tracker: Some(Arc::new(
                     poise::EditTracker::for_timespan(std::time::Duration::from_secs(10)))),
                 case_insensitive_commands: true,
@@ -122,9 +141,18 @@ async fn main() -> Result<(), Error> {
                     "#
                 ).execute(&database).await?;
 
+                sqlx::query(
+                    r#"
+                    CREATE TABLE IF NOT EXISTS settings (
+                        guildid BIGINT NOT NULL PRIMARY KEY,
+                        prefix TEXT
+                    )
+                    "#
+                ).execute(&database).await?;
+
                 println!("Bot is ready!");
 
-                Ok(Data { database })
+                Ok(Data { database, prefix: args.prefix })
             })
         })
         .build();
