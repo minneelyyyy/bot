@@ -6,6 +6,7 @@ mod yeehaw;
 mod gambling;
 mod eval;
 mod self_roles;
+mod settings;
 
 use crate::common::{Data, Error};
 
@@ -22,5 +23,6 @@ pub fn commands() -> Vec<Command<Data, Error>> {
         gambling::shop::buy(),
         eval::eval(),
         self_roles::role(),
+        settings::setting(),
     ]
 }
