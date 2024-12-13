@@ -1,4 +1,4 @@
-use crate::common::{Context, Error};
+use crate::common::{self, Context, Error};
 use std::io::Cursor;
 
 /// Evaluates a Lamm program
@@ -21,9 +21,9 @@ pub async fn eval(ctx: Context<'_>, expr: poise::CodeBlock) -> Result<(), Error>
 	});
 
 	match values {
-		Ok(values) => ctx.reply(format!("{values}")).await,
-		Err(e) => ctx.reply(format!("```ansi\n\x1b[31;1merror\x1b[0m: {e}\n```")).await,
-	}?;
+		Ok(values) => common::no_ping_reply(&ctx, format!("{values}")).await?,
+		Err(e) => common::no_ping_reply(&ctx, format!("```ansi\n\x1b[31;1merror\x1b[0m: {e}\n```")).await?,
+	};
 
     Ok(())
 }
