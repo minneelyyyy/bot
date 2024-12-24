@@ -8,10 +8,21 @@ mod eval;
 mod self_roles;
 mod settings;
 
-use crate::common::{Data, Error};
+use crate::common::{Data, Error, Context};
+
+/// Display a help menu
+#[poise::command(prefix_command, slash_command)]
+async fn help(ctx: Context<'_>,
+    #[description = "Specific command to get help with"]
+    command: Option<String>) -> Result<(), Error>
+{
+    poise::builtins::help(ctx, command.as_deref(), poise::builtins::HelpConfiguration::default()).await?;
+    Ok(())
+}
 
 pub fn commands() -> Vec<Command<Data, Error>> {
     vec![
+        help(),
         ping::ping(),
         dox::dox(),
         yeehaw::yeehaw(),
