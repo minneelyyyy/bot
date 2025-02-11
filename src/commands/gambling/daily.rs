@@ -61,12 +61,12 @@ where
 #[poise::command(slash_command, prefix_command)]
 pub async fn streak(ctx: Context<'_>, user: Option<User>) -> Result<(), Error> {
     let db = &ctx.data().database;
-    let (user, name) = match user {
-        Some(user) => (user.id, user.display_name().to_string()),
-        None => (ctx.author().id, "You".to_string()),
+    let (user, who) = match user {
+        Some(user) => (user.id, format!("{} has", user.display_name())),
+        None => (ctx.author().id, "You have".to_string()),
     };
 
-    ctx.reply(format!("{name} have a daily streak of **{}**", get_streak(db, user).await?.unwrap_or(0))).await?;
+    ctx.reply(format!("{who} a daily streak of **{}**", get_streak(db, user).await?.unwrap_or(0))).await?;
     Ok(())
 }
 
