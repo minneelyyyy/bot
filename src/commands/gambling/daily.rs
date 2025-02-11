@@ -1,6 +1,6 @@
 use crate::{Context, Error};
 
-use poise::serenity_prelude::UserId;
+use poise::serenity_prelude::{UserId, User};
 use sqlx::{types::chrono::{DateTime, Utc, TimeZone}, PgExecutor, Row};
 
 use std::time::Duration;
@@ -59,10 +59,14 @@ where
 
 /// Tells you what your current daily streak is
 #[poise::command(slash_command, prefix_command)]
-pub async fn streak(ctx: Context<'_>) -> Result<(), Error> {
+pub async fn streak(ctx: Context<'_>, user: Option<User>) -> Result<(), Error> {
     let db = &ctx.data().database;
+    let (user, name) = match user {
+        Some(user) => (user.id, user.display_name().to_string()),
+        None => (ctx.author().id, "You".to_string()),
+    };
 
-    ctx.reply(format!("You have a daily streak of **{}**", get_streak(db, ctx.author().id).await?.unwrap_or(0))).await?;
+    ctx.reply(format!("{name} have a daily streak of **{}**", get_streak(db, user).await?.unwrap_or(0))).await?;
     Ok(())
 }
 

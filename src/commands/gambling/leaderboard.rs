@@ -55,6 +55,7 @@ async fn display_leaderboard(ctx: Context<'_>, t: LeaderboardType) -> Result<(),
     Ok(())
 }
 
+/// DIsplay users with the top highest balances
 #[poise::command(slash_command, prefix_command)]
 pub async fn tokens(ctx: Context<'_>, count: Option<usize>) -> Result<(), Error> {
     let count = count.unwrap_or(10);
@@ -67,6 +68,7 @@ pub async fn tokens(ctx: Context<'_>, count: Option<usize>) -> Result<(), Error>
     display_leaderboard(ctx, LeaderboardType::Tokens(count)).await
 }
 
+/// Display users with the top highest daily streaks
 #[poise::command(slash_command, prefix_command)]
 pub async fn dailies(ctx: Context<'_>, count: Option<usize>) -> Result<(), Error> {
     let count = count.unwrap_or(10);
