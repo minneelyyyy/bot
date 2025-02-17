@@ -7,6 +7,7 @@ mod gambling;
 mod eval;
 pub mod self_roles;
 mod settings;
+mod version;
 
 use crate::common::{Data, Error, Context};
 
@@ -35,5 +36,6 @@ pub fn commands() -> Vec<Command<Data, Error>> {
         eval::eval(),
         self_roles::role(),
         settings::setting(),
+        version::version(),
     ]
 }
