@@ -3,35 +3,25 @@ use crate::common::{self, Context, Error};
 
 use poise::serenity_prelude as serenity;
 
-/// force remove someone's role (this does not delete the role)
 #[poise::command(slash_command, prefix_command, required_permissions = "MANAGE_ROLES")]
 pub async fn remove(ctx: Context<'_>, user: serenity::User) -> Result<(), Error> {
-    let db = &ctx.data().database;
-
-    if let Some(guild) = ctx.guild_id() {
-        match super::get_user_role(user.id, guild, db).await? {
-            Some(role) => {
-                sqlx::query("DELETE FROM selfroles WHERE userid = $1 AND guildid = $2")
-                    .bind(user.id.get() as i64)
-                    .bind(guild.get() as i64)
-                    .execute(db).await?;
-
-                let member = guild.member(ctx, user.id).await?;
-                
-                member.remove_role(ctx, role).await?;
-                let role = guild.role(ctx, role).await?;
-
-                common::no_ping_reply(&ctx, format!("{} has had {} removed.", user, role)).await?;
-
-                Ok(())
-            },
-            None => {
-                common::no_ping_reply(&ctx, format!("{} does not have a personal role to remove.", user)).await?;
-                Ok(())
-            }
-        }
+    let guild = if let Some(guild) = ctx.guild_id() {
+        guild
     } else {
-        ctx.reply("This command can only be run in a guild!").await?;
-        Ok(())
+        ctx.reply("This command can only be run inside of a guild.").await?;
+        return Ok(());
+    };
+
+    let mut tx = ctx.data().database.begin().await?;
+
+    if let Some(role) = super::get_user_role(user.id, guild, &mut *tx).await? {
+        guild.delete_role(ctx, role).await?;
+        super::remove_role(role, guild, &mut *tx).await?;
+        tx.commit().await?;
+        common::no_ping_reply(&ctx, format!("{}'s self role has been deleted.", user)).await?;
+    } else {
+        common::no_ping_reply(&ctx, format!("{} has no self role.", user)).await?;
     }
+
+    Ok(())
 }

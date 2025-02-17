@@ -1,11 +1,11 @@
 
-use crate::common::{Context, Error};
+use crate::common::{self, Context, Error};
 
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
 use hex_color::HexColor;
-use poise::serenity_prelude::{colours, Color, EditRole};
+use poise::serenity_prelude::{colours, Color, EditRole, Permissions};
 
 static COLORS: Lazy<HashMap<&'static str, Color>> = Lazy::new(|| {
     HashMap::from([
@@ -69,42 +69,29 @@ pub async fn color(ctx: Context<'_>, #[autocomplete = "autocomplete_colors"] col
         Color::from_rgb(rgb.r, rgb.g, rgb.b)
     };
 
-    if let Some(guild) = ctx.guild_id() {
-        let mut tx = ctx.data().database.begin().await?;
-
-        match super::get_user_role(ctx.author().id, guild, &mut *tx).await? {
-            Some(role) => {
-                guild.edit_role(ctx, role, EditRole::new().colour(color)).await?;
-                let role = guild.role(ctx, role).await?;
-
-                ctx.reply(format!("{}'s color has been updated!", role)).await?;
-
-                Ok(())
-            },
-            None => {
-                let role = guild.create_role(ctx,
-                    EditRole::new()
-                        .name(format!("#{:06x}", color.0))
-                        .colour(color)).await?;
-
-                sqlx::query("INSERT INTO selfroles (userid, roleid, guildid) VALUES ($1, $2, $3)")
-                    .bind(ctx.author().id.get() as i64)
-                    .bind(role.id.get() as i64)
-                    .bind(guild.get() as i64)
-                    .execute(&mut *tx).await?;
-                
-                tx.commit().await?;
-
-                let member = guild.member(ctx, ctx.author().id).await?;
-                member.add_role(ctx, role.clone()).await?;
-
-                ctx.reply(format!("You have been given the {} role!", role)).await?;
-
-                return Ok(());
-            }
-        }
+    let guild = if let Some(guild) = ctx.guild_id() {
+        guild
     } else {
-        ctx.reply("This command must be run within a server.").await?;
-        Ok(())
+        ctx.reply("This command can only be run inside of a guild.").await?;
+        return Ok(());
+    };
+
+    let user = ctx.author();
+
+    let mut tx = ctx.data().database.begin().await?;
+
+    if let Some(role) = super::get_user_role(user.id, guild, &mut *tx).await? {
+        let role = guild.role(ctx, role).await?;
+        guild.edit_role(ctx, role.id, EditRole::new().colour(color)).await?;
+        common::no_ping_reply(&ctx, format!("{}'s color has been updated.", role)).await?;
+    } else {
+        let role = guild.create_role(ctx, EditRole::new().colour(color).name(user.name.clone()).permissions(Permissions::empty())).await?;
+        super::update_user_role(user.id, guild, role.id, &mut *tx).await?;
+        let member = guild.member(ctx, user).await?;
+        member.add_role(ctx, role.id).await?;
+        tx.commit().await?;
+        common::no_ping_reply(&ctx, format!("{} has been given the new role {}.", user, role)).await?;
     }
+
+    Ok(())
 }

@@ -2,6 +2,7 @@ mod commands;
 
 pub mod common;
 pub mod inventory;
+use crate::commands::self_roles;
 use crate::common::{Context, Error, Data};
 
 use std::env;
@@ -22,14 +23,30 @@ struct BotArgs {
 }
 
 async fn event_handler(
-    _ctx: &serenity::Context,
+    ctx: &serenity::Context,
     event: &serenity::FullEvent,
     _framework: poise::FrameworkContext<'_, Data, Error>,
-    _data: &Data,
+    data: &Data,
 ) -> Result<(), Error> {
     match event {
         serenity::FullEvent::Message { new_message: message } => {
             if message.author.bot { return Ok(()) }
+        }
+        serenity::FullEvent::GuildMemberRemoval { guild_id, user, .. } => {
+            let mut tx = data.database.begin().await?;
+
+            if let Some(role) = self_roles::get_user_role(user.id, *guild_id, &mut *tx).await? {
+                guild_id.delete_role(ctx, role).await?;
+                self_roles::remove_role(role, *guild_id, &mut *tx).await?;
+                tx.commit().await?;
+            }
+        },
+        serenity::FullEvent::GuildRoleDelete { guild_id, removed_role_id, .. } => {
+            let mut tx = data.database.begin().await?;
+
+            self_roles::remove_role(*removed_role_id, *guild_id, &mut *tx).await?;
+
+            tx.commit().await?;
         }
         _ => (),
     }
@@ -64,7 +81,9 @@ async fn main() -> Result<(), Error> {
         serenity::GatewayIntents::GUILD_MESSAGES
             | serenity::GatewayIntents::DIRECT_MESSAGES
             | serenity::GatewayIntents::MESSAGE_CONTENT)
-        .unwrap_or(serenity::GatewayIntents::empty());
+        .unwrap_or(serenity::GatewayIntents::empty())
+            | serenity::GatewayIntents::GUILD_MEMBERS
+            | serenity::GatewayIntents::GUILDS;
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {

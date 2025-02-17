@@ -5,7 +5,7 @@ mod dox;
 mod yeehaw;
 mod gambling;
 mod eval;
-mod self_roles;
+pub mod self_roles;
 mod settings;
 
 use crate::common::{Data, Error, Context};
