@@ -39,11 +39,17 @@ pub async fn edit_role<'a, E>(ctx: Context<'a>, user: UserId, guild: GuildId, ed
 }
 
 async fn create_role<'a, E>(ctx: Context<'a>, user: UserId, guild: GuildId, edit: EditRole<'a>, db: E) -> Result<RoleId, Error>
-    where E: PgExecutor<'a>,
+    where E: PgExecutor<'a> + Clone,
 {
     let def = EditRole::new()
         .name(user.to_user(ctx).await?.name)
-        .permissions(Permissions::empty());
+        .permissions(Permissions::empty())
+        .position({
+            match crate::commands::settings::get_positional_role(ctx, guild).await? {
+                Some(role) => guild.role(ctx, role).await?.position,
+                None => 0u16,
+            }
+        });
 
     let member = guild.member(ctx, user).await?;
 

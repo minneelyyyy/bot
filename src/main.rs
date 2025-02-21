@@ -62,12 +62,11 @@ async fn get_prefix(ctx: PartialContext<'_, Data, Error>) -> Result<Option<Strin
 
     let db = &ctx.data.database;
 
-    let prefix = sqlx::query("SELECT prefix FROM settings WHERE guildid = $1")
+    let prefix: Option<String> = sqlx::query("SELECT prefix FROM settings WHERE guildid = $1")
         .bind(guild.get() as i64)
-        .fetch_one(db).await.ok()
-            .map(|x| x.get(0)).unwrap_or(ctx.data.prefix.clone());
+        .fetch_one(db).await?.get(0);
 
-    Ok(prefix)
+    Ok(prefix.or(ctx.data.prefix.clone()))
 }
 
 #[tokio::main]
@@ -164,6 +163,7 @@ async fn main() -> Result<(), Error> {
                     r#"
                     CREATE TABLE IF NOT EXISTS settings (
                         guildid BIGINT NOT NULL PRIMARY KEY,
+                        positional_role BIGINT,
                         prefix TEXT
                     )
                     "#
