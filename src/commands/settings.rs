@@ -1,4 +1,4 @@
-use crate::common::{Context, Error};
+use crate::common::{self, Context, Error};
 
 use poise::serenity_prelude::{Role, RoleId, GuildId};
 use sqlx::Row;
@@ -6,9 +6,14 @@ use sqlx::Row;
 async fn get_prefix(ctx: Context<'_>, guild: GuildId) -> Result<Option<String>, Error> {
     let db = &ctx.data().database;
 
-    let prefix: Option<String> = sqlx::query("SELECT prefix FROM settings WHERE guildid = $1")
+    let prefix: Option<String> = match sqlx::query("SELECT prefix FROM settings WHERE guildid = $1")
         .bind(guild.get() as i64)
-        .fetch_one(db).await?.get(0);
+        .fetch_one(db).await
+    {
+        Ok(r) => r.get(0),
+        Err(sqlx::Error::RowNotFound) => None,
+        Err(e) => return Err(Box::new(e)),
+    };
 
     Ok(prefix.or(ctx.data().prefix.clone()))
 }
@@ -38,9 +43,9 @@ async fn prefix(ctx: Context<'_>, prefix: Option<String>) -> Result<(), Error> {
                 .bind(guild.get() as i64)
                 .bind(&prefix)
                 .execute(&mut *tx).await?;
-        
+
             tx.commit().await?;
-        
+
             ctx.reply(format!("This server's custom prefix has been updated to `{prefix}`.")).await?;
         }
         None => {
@@ -55,9 +60,14 @@ async fn prefix(ctx: Context<'_>, prefix: Option<String>) -> Result<(), Error> {
 pub async fn get_positional_role(ctx: Context<'_>, guild: GuildId) -> Result<Option<RoleId>, Error> {
     let db = &ctx.data().database;
 
-    let role: Option<i64> = sqlx::query("SELECT positional_role FROM settings WHERE guildid = $1")
+    let role: Option<i64> = match sqlx::query("SELECT positional_role FROM settings WHERE guildid = $1")
         .bind(guild.get() as i64)
-        .fetch_one(db).await?.get(0);
+        .fetch_one(db).await
+    {
+        Ok(r) => r.get(0),
+        Err(sqlx::Error::RowNotFound) => None,
+        Err(e) => return Err(Box::new(e)),
+    };
 
     Ok(role.map(|sf| RoleId::new(sf as u64)))
 }
@@ -90,7 +100,7 @@ pub async fn position(ctx: Context<'_>, role: Option<Role>) -> Result<(), Error>
 
             tx.commit().await?;
 
-            ctx.reply(format!("The bot will now place newly created self roles below `{role}`.")).await?;
+            common::no_ping_reply(&ctx, format!("The bot will now place newly created self roles below {role}.")).await?;
         }
         None => {
             let s = match get_positional_role(ctx, guild).await? {
@@ -108,9 +118,14 @@ pub async fn position(ctx: Context<'_>, role: Option<Role>) -> Result<(), Error>
 pub async fn get_hoist_selfroles(ctx: Context<'_>, guild: GuildId) -> Result<bool, Error> {
     let db = &ctx.data().database;
 
-    let hoist: Option<bool> = sqlx::query("SELECT hoist_selfroles FROM settings WHERE guildid = $1")
+    let hoist: Option<bool> = match sqlx::query("SELECT hoist_selfroles FROM settings WHERE guildid = $1")
         .bind(guild.get() as i64)
-        .fetch_one(db).await?.get(0);
+        .fetch_one(db).await
+    {
+        Ok(r) => r.get(0),
+        Err(sqlx::Error::RowNotFound) => None,
+        Err(e) => return Err(Box::new(e)),
+    };
 
     Ok(hoist.unwrap_or(false))
 }
