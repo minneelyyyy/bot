@@ -62,9 +62,14 @@ async fn get_prefix(ctx: PartialContext<'_, Data, Error>) -> Result<Option<Strin
 
     let db = &ctx.data.database;
 
-    let prefix: Option<String> = sqlx::query("SELECT prefix FROM settings WHERE guildid = $1")
+    let prefix = match sqlx::query("SELECT prefix FROM settings WHERE guildid = $1")
         .bind(guild.get() as i64)
-        .fetch_one(db).await?.get(0);
+        .fetch_one(db).await
+    {
+        Ok(r) => r.get(0),
+        Err(sqlx::Error::RowNotFound) => None,
+        Err(e) => return Err(Box::new(e)),
+    };
 
     Ok(prefix.or(ctx.data.prefix.clone()))
 }
