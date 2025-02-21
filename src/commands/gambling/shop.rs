@@ -37,9 +37,10 @@ async fn autocomplete_shop<'a>(
 
 #[poise::command(slash_command, prefix_command)]
 pub async fn buy(ctx: Context<'_>,
+    count: Option<i32>,
     #[autocomplete = "autocomplete_shop"]
-    item: String,
-    count: Option<i32>) -> Result<(), Error>
+    #[rest]
+    item: String) -> Result<(), Error>
 {
     let count = count.unwrap_or(1);
 

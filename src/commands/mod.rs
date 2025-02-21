@@ -15,6 +15,7 @@ use crate::common::{Data, Error, Context};
 #[poise::command(prefix_command, slash_command)]
 async fn help(ctx: Context<'_>,
     #[description = "Specific command to get help with"]
+    #[rest]
     command: Option<String>) -> Result<(), Error>
 {
     poise::builtins::help(ctx, command.as_deref(), poise::builtins::HelpConfiguration::default()).await?;
