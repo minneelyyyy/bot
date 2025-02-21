@@ -49,7 +49,8 @@ async fn create_role<'a, E>(ctx: Context<'a>, user: UserId, guild: GuildId, edit
                 Some(role) => guild.role(ctx, role).await?.position,
                 None => 0u16,
             }
-        });
+        })
+        .hoist(crate::commands::settings::get_hoist_selfroles(ctx, guild).await?);
 
     let member = guild.member(ctx, user).await?;
 

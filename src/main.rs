@@ -164,6 +164,7 @@ async fn main() -> Result<(), Error> {
                     CREATE TABLE IF NOT EXISTS settings (
                         guildid BIGINT NOT NULL PRIMARY KEY,
                         positional_role BIGINT,
+                        hoist_selfroles BOOLEAN,
                         prefix TEXT
                     )
                     "#

@@ -25,7 +25,9 @@ async fn prefix(ctx: Context<'_>, prefix: Option<String>) -> Result<(), Error> {
 
     match prefix {
         Some(prefix) => {
-            if !ctx.author_member().await.unwrap().permissions.iter().any(|p| p.manage_guild()) {
+            let member = ctx.author_member().await.unwrap();
+
+            if !member.permissions(ctx).iter().any(|p| p.manage_guild()) {
                 ctx.reply("You do not have permission to change this setting.").await?;
                 return Ok(());
             }
@@ -70,7 +72,9 @@ pub async fn position(ctx: Context<'_>, role: Option<Role>) -> Result<(), Error>
         }
     };
 
-    if !ctx.author_member().await.unwrap().permissions.iter().any(|p| p.manage_guild()) {
+    let member = ctx.author_member().await.unwrap();
+
+    if !member.permissions(ctx).iter().any(|p| p.manage_guild()) {
         ctx.reply("You do not have permission to see or change this setting.").await?;
         return Ok(());
     }
@@ -101,7 +105,65 @@ pub async fn position(ctx: Context<'_>, role: Option<Role>) -> Result<(), Error>
     Ok(())
 }
 
-#[poise::command(prefix_command, slash_command, subcommands("prefix", "position"), subcommand_required)]
+pub async fn get_hoist_selfroles(ctx: Context<'_>, guild: GuildId) -> Result<bool, Error> {
+    let db = &ctx.data().database;
+
+    let hoist: Option<bool> = sqlx::query("SELECT hoist_selfroles FROM settings WHERE guildid = $1")
+        .bind(guild.get() as i64)
+        .fetch_one(db).await?.get(0);
+
+    Ok(hoist.unwrap_or(false))
+}
+
+#[poise::command(prefix_command, slash_command)]
+pub async fn hoist(ctx: Context<'_>, hoist: Option<bool>) -> Result<(), Error> {
+    let guild = match ctx.guild_id() {
+        Some(g) => g,
+        None => {
+            ctx.reply("This command must be ran within a guild.").await?;
+            return Ok(());
+        }
+    };
+
+    match hoist {
+        Some(hoist) => {
+            let member = ctx.author_member().await.unwrap();
+
+            if !member.permissions(ctx).iter().any(|p| p.manage_guild()) {
+                ctx.reply("You do not have permission to change this setting.").await?;
+                return Ok(());
+            }
+
+            let mut tx = ctx.data().database.begin().await?;
+
+            sqlx::query("INSERT INTO settings (guildid, hoist_selfroles) VALUES ($1, $2) ON CONFLICT (guildid) DO UPDATE SET hoist_selfroles = EXCLUDED.hoist_selfroles")
+                .bind(guild.get() as i64)
+                .bind(hoist)
+                .execute(&mut *tx).await?;
+
+            tx.commit().await?;
+
+            if hoist {
+                ctx.reply("New self roles will now be automatically hoisted.").await?;
+            } else {
+                ctx.reply("New self roles will not be hoisted.").await?;
+            }
+        }
+        None => {
+            let s = if get_hoist_selfroles(ctx, guild).await? {
+                "enabled"
+            } else {
+                "disabled"
+            };
+
+            ctx.reply(format!("Hoisting selfroles is {s}.")).await?;
+        }
+    }
+
+    Ok(())
+}
+
+#[poise::command(prefix_command, slash_command, subcommands("prefix", "position", "hoist"), subcommand_required)]
 pub async fn setting(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
