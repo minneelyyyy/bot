@@ -61,7 +61,11 @@ async fn autocomplete_colors<'a>(
 
 /// Change the color of your personal role
 #[poise::command(slash_command, prefix_command)]
-pub async fn color(ctx: Context<'_>, #[autocomplete = "autocomplete_colors"] color: String) -> Result<(), Error> {
+pub async fn color(ctx: Context<'_>,
+    #[autocomplete = "autocomplete_colors"]
+    #[rest]
+    color: String) -> Result<(), Error>
+{
     let color = if let Some(named) = COLORS.get(color.as_str()) {
         named.clone()
     } else {

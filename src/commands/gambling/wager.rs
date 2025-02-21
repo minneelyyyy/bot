@@ -8,6 +8,7 @@ pub async fn wager(
     ctx: Context<'_>,
     amount: String,
     #[autocomplete = "super::autocomplete_inventory"]
+    #[rest]
     item: Option<String>) -> Result<(), Error>
 {
     let mut tx = ctx.data().database.begin().await?;
