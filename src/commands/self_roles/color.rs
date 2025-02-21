@@ -5,7 +5,7 @@ use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
 use hex_color::HexColor;
-use poise::serenity_prelude::{colours, Color, EditRole, Permissions};
+use poise::serenity_prelude::{colours, Color, EditRole};
 
 static COLORS: Lazy<HashMap<&'static str, Color>> = Lazy::new(|| {
     HashMap::from([
@@ -78,20 +78,8 @@ pub async fn color(ctx: Context<'_>, #[autocomplete = "autocomplete_colors"] col
 
     let user = ctx.author();
 
-    let mut tx = ctx.data().database.begin().await?;
-
-    if let Some(role) = super::get_user_role(user.id, guild, &mut *tx).await? {
-        let role = guild.role(ctx, role).await?;
-        guild.edit_role(ctx, role.id, EditRole::new().colour(color)).await?;
-        common::no_ping_reply(&ctx, format!("{}'s color has been updated.", role)).await?;
-    } else {
-        let role = guild.create_role(ctx, EditRole::new().colour(color).name(user.name.clone()).permissions(Permissions::empty())).await?;
-        super::update_user_role(user.id, guild, role.id, &mut *tx).await?;
-        let member = guild.member(ctx, user).await?;
-        member.add_role(ctx, role.id).await?;
-        tx.commit().await?;
-        common::no_ping_reply(&ctx, format!("{} has been given the new role {}.", user, role)).await?;
-    }
+    let role = super::edit_role(ctx, user.id, guild, EditRole::new().colour(color), &ctx.data().database).await?;
+    common::no_ping_reply(&ctx, format!("{}'s color has been updated.", guild.role(ctx, role).await?)).await?;
 
     Ok(())
 }
