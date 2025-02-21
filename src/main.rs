@@ -17,7 +17,7 @@ use sqlx::Row;
 
 #[derive(Parser, Debug)]
 struct BotArgs {
-    /// Prefix for the bot (if unspecified, the bot will not have one)
+    /// Prefix for the bot. If unspecified, the bot will not have one and will also not have access to message content.
     #[arg(short, long)]
     prefix: Option<String>,
 }
