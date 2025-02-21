@@ -1,7 +1,7 @@
 
 use crate::common::{Context, Error};
 use sqlx::{PgExecutor, Row};
-use poise::serenity_prelude::{RoleId, UserId, GuildId};
+use poise::serenity_prelude::{EditRole, GuildId, Permissions, RoleId, UserId};
 
 mod register;
 mod whois;
@@ -24,6 +24,42 @@ mod remove;
 )]
 pub async fn role(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
+}
+
+/// Edit a user's personal role, creates it with some default values if it doesn't exist.
+pub async fn edit_role<'a, E>(ctx: Context<'a>, user: UserId, guild: GuildId, edit: EditRole<'a>, db: E) -> Result<RoleId, Error>
+    where E: PgExecutor<'a> + Clone,
+{
+    if let Some(role) = get_user_role(user, guild, db.clone()).await? {
+        guild.role(ctx, role).await?.edit(ctx, edit).await?;
+        Ok(role)
+    } else {
+        create_role(ctx, user, guild, edit, db).await
+    }
+}
+
+async fn create_role<'a, E>(ctx: Context<'a>, user: UserId, guild: GuildId, edit: EditRole<'a>, db: E) -> Result<RoleId, Error>
+    where E: PgExecutor<'a> + Clone,
+{
+    let def = EditRole::new()
+        .name(user.to_user(ctx).await?.name)
+        .permissions(Permissions::empty())
+        .position({
+            match crate::commands::settings::get_positional_role(ctx, guild).await? {
+                Some(role) => guild.role(ctx, role).await?.position,
+                None => 0u16,
+            }
+        })
+        .hoist(crate::commands::settings::get_hoist_selfroles(ctx, guild).await?);
+
+    let member = guild.member(ctx, user).await?;
+
+    let mut role = guild.create_role(ctx, def).await?;
+    role.edit(ctx, edit).await?;
+    member.add_role(ctx, &role).await?;
+    update_user_role(user, guild, role.id, db).await?;
+
+    Ok(role.id)
 }
 
 /// Remove a row concerning a user's self role from the database

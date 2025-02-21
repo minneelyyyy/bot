@@ -1,7 +1,7 @@
 
 use crate::common::{self, Context, Error};
 
-use poise::serenity_prelude::{EditRole, Permissions};
+use poise::serenity_prelude::EditRole;
 
 /// Change the name of your personal role
 #[poise::command(slash_command, prefix_command)]
@@ -15,20 +15,8 @@ pub async fn name(ctx: Context<'_>, name: String) -> Result<(), Error> {
 
     let user = ctx.author();
 
-    let mut tx = ctx.data().database.begin().await?;
-
-    if let Some(role) = super::get_user_role(user.id, guild, &mut *tx).await? {
-        let role = guild.role(ctx, role).await?;
-        guild.edit_role(ctx, role.id, EditRole::new().name(name)).await?;
-        common::no_ping_reply(&ctx, format!("{} has been updated.", role)).await?;
-    } else {
-        let role = guild.create_role(ctx, EditRole::new().name(name).permissions(Permissions::empty())).await?;
-        super::update_user_role(user.id, guild, role.id, &mut *tx).await?;
-        let member = guild.member(ctx, user).await?;
-        member.add_role(ctx, role.id).await?;
-        tx.commit().await?;
-        common::no_ping_reply(&ctx, format!("{} has been given the new role {}.", user, role)).await?;
-    }
+    let role = super::edit_role(ctx, user.id, guild, EditRole::new().name(name), &ctx.data().database).await?;
+    common::no_ping_reply(&ctx, format!("{} has been updated.", guild.role(ctx, role).await?)).await?;
 
     Ok(())
 }
