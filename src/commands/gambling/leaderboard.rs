@@ -55,7 +55,7 @@ async fn display_leaderboard(ctx: Context<'_>, t: LeaderboardType) -> Result<(),
     Ok(())
 }
 
-/// DIsplay users with the top highest balances
+/// Display users with the top highest balances
 #[poise::command(slash_command, prefix_command)]
 pub async fn tokens(ctx: Context<'_>, count: Option<usize>) -> Result<(), Error> {
     let count = count.unwrap_or(10);
