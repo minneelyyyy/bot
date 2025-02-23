@@ -15,8 +15,12 @@ pub async fn name(ctx: Context<'_>, #[rest] name: String) -> Result<(), Error> {
 
     let user = ctx.author();
 
-    let role = super::edit_role(ctx, user.id, guild, EditRole::new().name(name), &ctx.data().database).await?;
+    let mut tx = ctx.data().database.begin().await?;
+    let role = super::edit_role(ctx, user.id, guild, EditRole::new().name(name), &mut *tx).await?;
+    tx.commit().await?;
+
     common::no_ping_reply(&ctx, format!("{} has been updated.", guild.role(ctx, role).await?)).await?;
+
 
     Ok(())
 }
