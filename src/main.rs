@@ -31,6 +31,7 @@ async fn event_handler(
     match event {
         serenity::FullEvent::Message { new_message: message } => {
             if message.author.bot { return Ok(()) }
+            println!("{} in #{}: {}", message.author, message.channel_id, message.content);
         }
         serenity::FullEvent::GuildMemberRemoval { guild_id, user, .. } => {
             let mut tx = data.database.begin().await?;
@@ -57,7 +58,7 @@ async fn event_handler(
 async fn get_prefix(ctx: PartialContext<'_, Data, Error>) -> Result<Option<String>, Error> {
     let guild = match ctx.guild_id {
         Some(guild) => guild,
-        None => return Ok(None),
+        None => return Ok(ctx.data.prefix.clone()),
     };
 
     let db = &ctx.data.database;
@@ -91,7 +92,7 @@ async fn main() -> Result<(), Error> {
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: commands::commands(),
+            commands: commands::commands().await,
             prefix_options: poise::PrefixFrameworkOptions {
                 dynamic_prefix: Some(|ctx| Box::pin(get_prefix(ctx))),
                 edit_tracker: Some(Arc::new(
