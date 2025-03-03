@@ -92,7 +92,7 @@ async fn main() -> Result<(), Error> {
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: commands::commands().await,
+            commands: commands::commands(),
             prefix_options: poise::PrefixFrameworkOptions {
                 dynamic_prefix: Some(|ctx| Box::pin(get_prefix(ctx))),
                 edit_tracker: Some(Arc::new(
