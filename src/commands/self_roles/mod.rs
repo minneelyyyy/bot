@@ -1,6 +1,6 @@
 
 use crate::common::{Context, Error};
-use sqlx::{PgExecutor, Row};
+use sqlx::{PgConnection, Row};
 use poise::serenity_prelude::{EditRole, GuildId, Permissions, RoleId, UserId};
 
 mod register;
@@ -27,10 +27,9 @@ pub async fn role(_ctx: Context<'_>) -> Result<(), Error> {
 }
 
 /// Edit a user's personal role, creates it with some default values if it doesn't exist.
-pub async fn edit_role<'a, E>(ctx: Context<'a>, user: UserId, guild: GuildId, edit: EditRole<'a>, db: E) -> Result<RoleId, Error>
-    where E: PgExecutor<'a> + Clone,
+pub async fn edit_role(ctx: Context<'_>, user: UserId, guild: GuildId, edit: EditRole<'_>, db: &mut PgConnection) -> Result<RoleId, Error>
 {
-    if let Some(role) = get_user_role(user, guild, db.clone()).await? {
+    if let Some(role) = get_user_role(user, guild, db).await? {
         guild.role(ctx, role).await?.edit(ctx, edit).await?;
         Ok(role)
     } else {
@@ -38,8 +37,12 @@ pub async fn edit_role<'a, E>(ctx: Context<'a>, user: UserId, guild: GuildId, ed
     }
 }
 
-async fn create_role<'a, E>(ctx: Context<'a>, user: UserId, guild: GuildId, edit: EditRole<'a>, db: E) -> Result<RoleId, Error>
-    where E: PgExecutor<'a> + Clone,
+async fn create_role(
+    ctx: Context<'_>,
+    user: UserId,
+    guild: GuildId,
+    edit: EditRole<'_>,
+    db: &mut PgConnection) -> Result<RoleId, Error>
 {
     let def = EditRole::new()
         .name(user.to_user(ctx).await?.name)
@@ -63,9 +66,7 @@ async fn create_role<'a, E>(ctx: Context<'a>, user: UserId, guild: GuildId, edit
 }
 
 /// Remove a row concerning a user's self role from the database
-pub async fn remove_user_role<'a, E>(user: UserId, guild: GuildId, db: E) -> Result<(), Error>
-    where E: PgExecutor<'a>,
-{
+pub async fn remove_user_role(user: UserId, guild: GuildId, db: &mut PgConnection) -> Result<(), Error> {
     sqlx::query("DELETE FROM selfroles WHERE userid = $1 AND guildid = $2")
         .bind(user.get() as i64)
         .bind(guild.get() as i64)
@@ -74,9 +75,7 @@ pub async fn remove_user_role<'a, E>(user: UserId, guild: GuildId, db: E) -> Res
     Ok(())
 }
 
-pub async fn remove_role<'a, E>(role: RoleId, guild: GuildId, db: E) -> Result<(), Error>
-where E: PgExecutor<'a>
-{
+pub async fn remove_role(role: RoleId, guild: GuildId, db: &mut PgConnection) -> Result<(), Error> {
     sqlx::query("DELETE FROM selfroles WHERE roleid = $1 AND guildid = $2")
         .bind(role.get() as i64)
         .bind(guild.get() as i64)
@@ -86,9 +85,7 @@ where E: PgExecutor<'a>
 }
 
 /// Replace a user's custom role with a new one
-pub async fn update_user_role<'a, E>(user: UserId, guild: GuildId, role: RoleId, db: E) -> Result<(), Error>
-    where E: PgExecutor<'a>,
-{
+pub async fn update_user_role(user: UserId, guild: GuildId, role: RoleId, db: &mut PgConnection) -> Result<(), Error> {
     sqlx::query("INSERT INTO selfroles (userid, guildid, roleid) VALUES($1, $2, $3) ON CONFLICT (userid, guildid) DO UPDATE SET roleid = EXCLUDED.roleid")
         .bind(user.get() as i64)
         .bind(guild.get() as i64)
@@ -99,9 +96,7 @@ pub async fn update_user_role<'a, E>(user: UserId, guild: GuildId, role: RoleId,
 }
 
 /// Get a user's personal role id from the database
-pub async fn get_user_role<'a, E>(user: UserId, guild: GuildId, db: E) -> Result<Option<RoleId>, Error>
-    where E: PgExecutor<'a>,
-{
+pub async fn get_user_role(user: UserId, guild: GuildId, db: &mut PgConnection) -> Result<Option<RoleId>, Error> {
     match sqlx::query("SELECT roleid FROM selfroles WHERE userid = $1 AND guildid = $2")
         .bind(user.get() as i64)
         .bind(guild.get() as i64)

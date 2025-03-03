@@ -82,7 +82,10 @@ pub async fn color(ctx: Context<'_>,
 
     let user = ctx.author();
 
-    let role = super::edit_role(ctx, user.id, guild, EditRole::new().colour(color), &ctx.data().database).await?;
+    let mut tx = ctx.data().database.begin().await?;
+    let role = super::edit_role(ctx, user.id, guild, EditRole::new().colour(color), &mut *tx).await?;
+    tx.commit().await?;
+
     common::no_ping_reply(&ctx, format!("{}'s color has been updated.", guild.role(ctx, role).await?)).await?;
 
     Ok(())
