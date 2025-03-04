@@ -31,7 +31,6 @@ async fn event_handler(
     match event {
         serenity::FullEvent::Message { new_message: message } => {
             if message.author.bot { return Ok(()) }
-            println!("{} in #{}: {}", message.author, message.channel_id, message.content);
         }
         serenity::FullEvent::GuildMemberRemoval { guild_id, user, .. } => {
             let mut tx = data.database.begin().await?;
