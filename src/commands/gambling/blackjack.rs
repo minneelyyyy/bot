@@ -1,4 +1,4 @@
-use crate::common::{Context, Error, Data};
+use crate::common::{Context, Error};
 use std::{cmp::Ordering, fmt::Display, time::Duration};
 use poise::serenity_prelude::{self as serenity, CreateInteractionResponseMessage};
 use rand::seq::SliceRandom;
@@ -248,7 +248,7 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
 
                 let s = match dealers_count.cmp(&players_count) {
                     Ordering::Less => {
-                        if players_count == 21 {
+                        if players_count == 21 && players_hand.len() == 2 {
                             let amount = amount * 3 / 2;
                             balance += amount;
                             format!("You've won with a Blackjack! You've gained **{amount}** tokens.")
@@ -258,7 +258,7 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
                         }
                     }
                     Ordering::Greater if dealers_count > 21 => {
-                        if players_count == 21 {
+                        if players_count == 21 && players_hand.len() == 2 {
                             let amount = amount * 3 / 2;
                             balance += amount;
                             format!("You've won with a Blackjack! You've gained **{amount}** tokens.")
