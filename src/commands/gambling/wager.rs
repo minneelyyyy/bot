@@ -92,7 +92,6 @@ pub async fn wager(
     }
 
     super::change_balance(ctx.author().id, balance, &mut *tx).await?;
-
     tx.commit().await?;
 
     Ok(())

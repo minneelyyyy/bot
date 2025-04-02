@@ -5,6 +5,7 @@ pub mod wager;
 pub mod daily;
 pub mod leaderboard;
 pub mod shop;
+pub mod blackjack;
 
 use crate::{inventory::{self, Inventory}, common::{Context, Error}};
 use poise::serenity_prelude::{self as serenity, futures::StreamExt, UserId};

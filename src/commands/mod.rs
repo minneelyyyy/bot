@@ -34,6 +34,7 @@ pub fn commands() -> Vec<Command<Data, Error>> {
         gambling::daily::daily(),
         gambling::leaderboard::leaderboard(),
         gambling::shop::buy(),
+        gambling::blackjack::blackjack(),
         eval::eval(),
         self_roles::role(),
         settings::setting(),
