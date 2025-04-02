@@ -196,7 +196,7 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
                             "**Your hand**: {} ({})\n\n",
                             "**Bet**: {}"
                         ),
-                        format!("{}, `XX`", dealers_hand[0]),
+                        format!("`{}`, `XX`", dealers_hand[0]),
                         dealers_hand[0].value(matches!(dealers_hand[0], Card { rank: Rank::Ace, .. })),
                         players_hand.iter().map(|card| format!("`{card}`")).collect::<Vec<String>>().join(", "),
                         players_count,
@@ -218,7 +218,10 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
         if mci.member.clone().unwrap().user.id == ctx.author().id {
             mci.create_response(ctx,
                 serenity::CreateInteractionResponse::Message(
-                    CreateInteractionResponseMessage::new().ephemeral(true).content("You cannot interact with this message."))).await?;
+                    CreateInteractionResponseMessage::new()
+                        .ephemeral(true)
+                        .content("You cannot interact with this message."))).await?;
+
             continue;
         }
 
