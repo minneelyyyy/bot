@@ -99,21 +99,8 @@ impl Card {
     }
 }
 
-#[derive(Debug, poise::Modal)]
-struct BlackJackAction {}
-
-#[poise::command(slash_command)]
-pub async fn modal(ctx: poise::ApplicationContext<'_, Data, Error>) -> Result<(), Error> {
-    use poise::Modal as _;
-
-    let data = BlackJackAction::execute(ctx).await?;
-    println!("Got data: {:?}", data);
-
-    Ok(())
-}
-
 /// Blackjack!
-#[poise::command(slash_command, prefix_command, aliases("bj", "21"))]
+#[poise::command(slash_command, prefix_command, aliases("jackblack", "bj", "21"))]
 pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
 {
     let mut tx = ctx.data().database.begin().await?;
@@ -305,7 +292,7 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
             _ => {
                 ctx.reply("Invalid interaction response.").await?;
                 return Ok(());
-            },
+            }
         }
     }
 
