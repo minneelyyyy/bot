@@ -215,7 +215,7 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
                 return Ok(());
         };
 
-        if mci.member.clone().unwrap().user.id == ctx.author().id {
+        if mci.member.clone().unwrap().user.id != ctx.author().id {
             mci.create_response(ctx,
                 serenity::CreateInteractionResponse::Message(
                     CreateInteractionResponseMessage::new()
