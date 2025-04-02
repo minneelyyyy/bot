@@ -208,9 +208,12 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
 
         msg.edit(ctx, reply).await?;
 
+        let author_id = ctx.author().id;
+
         let Some(mci) = serenity::ComponentInteractionCollector::new(ctx.serenity_context())
             .timeout(Duration::from_secs(120))
-            .filter(move |mci| mci.data.custom_id.starts_with("blackjack")).await else {
+            .filter(move |mci| mci.data.custom_id.starts_with("blackjack")
+                && mci.member.as_ref().unwrap().user.id == author_id).await else {
                 ctx.reply("failed interaction!").await?;
                 return Ok(());
         };
