@@ -253,7 +253,7 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
                     Ordering::Less => {
                         if players_count == 21 {
                             let amount = amount * 3 / 2;
-                            balance += amount * 3 / 2;
+                            balance += amount;
                             format!("You've won with a Blackjack! You've gained **{amount}** tokens.")
                         } else {
                             balance += amount;
@@ -261,8 +261,14 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
                         }
                     }
                     Ordering::Greater if dealers_count > 21 => {
-                        balance += amount;
-                        format!("You've won! **{amount}** tokens have been added to your account.")
+                        if players_count == 21 {
+                            let amount = amount * 3 / 2;
+                            balance += amount;
+                            format!("You've won with a Blackjack! You've gained **{amount}** tokens.")
+                        } else {
+                            balance += amount;
+                            format!("You've won! **{amount}** tokens have been added to your account.")
+                        }
                     }
                     Ordering::Equal => {
                         format!("A draw!")
