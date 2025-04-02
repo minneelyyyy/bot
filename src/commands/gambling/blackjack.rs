@@ -1,6 +1,6 @@
 use crate::common::{Context, Error, Data};
 use std::{cmp::Ordering, fmt::Display, time::Duration};
-use poise::serenity_prelude::{self as serenity};
+use poise::serenity_prelude::{self as serenity, CreateInteractionResponseMessage};
 use rand::seq::SliceRandom;
 
 #[derive(Clone)]
@@ -208,15 +208,19 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
 
         msg.edit(ctx, reply).await?;
 
-        let author_id = ctx.author().id;
-
         let Some(mci) = serenity::ComponentInteractionCollector::new(ctx.serenity_context())
             .timeout(Duration::from_secs(120))
-            .filter(move |mci| mci.data.custom_id.starts_with("blackjack")
-                && mci.member.as_ref().unwrap().user.id == author_id).await else {
+            .filter(move |mci| mci.data.custom_id.starts_with("blackjack")).await else {
                 ctx.reply("failed interaction!").await?;
                 return Ok(());
         };
+
+        if mci.member.clone().unwrap().user.id == ctx.author().id {
+            mci.create_response(ctx,
+                serenity::CreateInteractionResponse::Message(
+                    CreateInteractionResponseMessage::new().ephemeral(true).content("You cannot interact with this message."))).await?;
+            continue;
+        }
 
         mci.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge).await?;
 
