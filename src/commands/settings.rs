@@ -178,7 +178,65 @@ pub async fn hoist(ctx: Context<'_>, hoist: Option<bool>) -> Result<(), Error> {
     Ok(())
 }
 
-#[poise::command(prefix_command, slash_command, subcommands("prefix", "position", "hoist"), subcommand_required)]
+pub async fn get_banrole(ctx: Context<'_>, guild: GuildId) -> Result<Option<RoleId>, Error> {
+    let db = &ctx.data().database;
+
+    let role: Option<i64> = match sqlx::query("SELECT banrole FROM settings WHERE guildid = $1")
+        .bind(guild.get() as i64)
+        .fetch_one(db).await
+    {
+        Ok(r) => r.get(0),
+        Err(sqlx::Error::RowNotFound) => None,
+        Err(e) => return Err(Box::new(e)),
+    };
+
+    Ok(role.map(|sf| RoleId::new(sf as u64)))
+}
+
+#[poise::command(prefix_command, slash_command)]
+pub async fn banrole(ctx: Context<'_>, role: Option<Role>) -> Result<(), Error> {
+    let guild = match ctx.guild_id() {
+        Some(g) => g,
+        None => {
+            ctx.reply("This command must be ran within a guild.").await?;
+            return Ok(());
+        }
+    };
+
+    let member = ctx.author_member().await.unwrap();
+
+    if !member.permissions(ctx).iter().any(|p| p.manage_guild()) {
+        ctx.reply("You do not have permission to see or change this setting.").await?;
+        return Ok(());
+    }
+
+    match role {
+        Some(role) => {
+            let mut tx = ctx.data().database.begin().await?;
+
+            sqlx::query("INSERT INTO settings (guildid, banrole) VALUES ($1, $2) ON CONFLICT (guildid) DO UPDATE SET banrole = EXCLUDED.banrole")
+                .bind(guild.get() as i64)
+                .bind(role.id.get() as i64)
+                .execute(&mut *tx).await?;
+
+            tx.commit().await?;
+
+            common::no_ping_reply(&ctx, format!("The bot will now give banned users the role {role}.")).await?;
+        }
+        None => {
+            let s = match get_banrole(ctx, guild).await? {
+                Some(r) => format!("{}", guild.role(ctx, r).await?),
+                None => "not set".into()
+            };
+
+            common::no_ping_reply(&ctx, format!("This server's ban role is {s}.")).await?;
+        }
+    }
+
+    Ok(())
+}
+
+#[poise::command(prefix_command, slash_command, subcommands("prefix", "position", "hoist", "banrole"), subcommand_required)]
 pub async fn setting(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }

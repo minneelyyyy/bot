@@ -8,6 +8,7 @@ mod eval;
 pub mod self_roles;
 mod settings;
 mod version;
+mod administration;
 
 use crate::common::{Data, Error, Context};
 
@@ -38,6 +39,8 @@ pub fn commands() -> Vec<Command<Data, Error>> {
         eval::eval(),
         self_roles::role(),
         settings::setting(),
+        administration::ban::ban(),
+        administration::ban::unban(),
         version::version(),
     ]
 }
