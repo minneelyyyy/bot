@@ -20,12 +20,9 @@ async fn get_prefix(ctx: Context<'_>, guild: GuildId) -> Result<Option<String>, 
 
 #[poise::command(prefix_command, slash_command)]
 async fn prefix(ctx: Context<'_>, prefix: Option<String>) -> Result<(), Error> {
-    let guild = match ctx.guild_id() {
-        Some(g) => g,
-        None => {
-            ctx.reply("This command must be ran within a guild.").await?;
-            return Ok(());
-        }
+    let Some(guild) = ctx.guild_id() else {
+        ctx.reply("This command must be ran within a guild.").await?;
+        return Ok(());
     };
 
     match prefix {
@@ -74,12 +71,9 @@ pub async fn get_positional_role(ctx: Context<'_>, guild: GuildId) -> Result<Opt
 
 #[poise::command(prefix_command, slash_command)]
 pub async fn position(ctx: Context<'_>, role: Option<Role>) -> Result<(), Error> {
-    let guild = match ctx.guild_id() {
-        Some(g) => g,
-        None => {
-            ctx.reply("This command must be ran within a guild.").await?;
-            return Ok(());
-        }
+    let Some(guild) = ctx.guild_id() else {
+        ctx.reply("This command must be ran within a guild.").await?;
+        return Ok(());
     };
 
     let member = ctx.author_member().await.unwrap();
@@ -132,12 +126,9 @@ pub async fn get_hoist_selfroles(ctx: Context<'_>, guild: GuildId) -> Result<boo
 
 #[poise::command(prefix_command, slash_command)]
 pub async fn hoist(ctx: Context<'_>, hoist: Option<bool>) -> Result<(), Error> {
-    let guild = match ctx.guild_id() {
-        Some(g) => g,
-        None => {
-            ctx.reply("This command must be ran within a guild.").await?;
-            return Ok(());
-        }
+    let Some(guild) = ctx.guild_id() else {
+        ctx.reply("This command must be ran within a guild.").await?;
+        return Ok(());
     };
 
     match hoist {
@@ -195,12 +186,9 @@ pub async fn get_banrole(ctx: Context<'_>, guild: GuildId) -> Result<Option<Role
 
 #[poise::command(prefix_command, slash_command)]
 pub async fn banrole(ctx: Context<'_>, role: Option<Role>) -> Result<(), Error> {
-    let guild = match ctx.guild_id() {
-        Some(g) => g,
-        None => {
-            ctx.reply("This command must be ran within a guild.").await?;
-            return Ok(());
-        }
+    let Some(guild) = ctx.guild_id() else {
+        ctx.reply("This command must be ran within a guild.").await?;
+        return Ok(());
     };
 
     let member = ctx.author_member().await.unwrap();

@@ -10,12 +10,9 @@ pub async fn ban(ctx: Context<'_>,
     #[rest]
     reason: Option<String>) -> Result<(), Error>
 {
-    let guild = match ctx.guild_id() {
-        Some(g) => g,
-        None => {
-            ctx.reply("This command must be ran within a guild.").await?;
-            return Ok(());
-        }
+    let Some(guild) = ctx.guild_id() else {
+        ctx.reply("This command must be ran within a guild.").await?;
+        return Ok(());
     };
 
     if let Some(role) = settings::get_banrole(ctx, guild).await? {
@@ -35,12 +32,9 @@ pub async fn ban(ctx: Context<'_>,
 #[poise::command(slash_command, prefix_command)]
 pub async fn unban(ctx: Context<'_>, user: serenity::User) -> Result<(), Error>
 {
-    let guild = match ctx.guild_id() {
-        Some(g) => g,
-        None => {
-            ctx.reply("This command must be ran within a guild.").await?;
-            return Ok(());
-        }
+    let Some(guild) = ctx.guild_id() else {
+        ctx.reply("This command must be ran within a guild.").await?;
+        return Ok(());
     };
 
     if let Some(role) = settings::get_banrole(ctx, guild).await? {

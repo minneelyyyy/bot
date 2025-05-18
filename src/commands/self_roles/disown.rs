@@ -4,10 +4,8 @@ use crate::common::{Context, Error};
 /// Remove and delete your personal role
 #[poise::command(slash_command, prefix_command)]
 pub async fn disown(ctx: Context<'_>) -> Result<(), Error> {
-    let guild = if let Some(guild) = ctx.guild_id() {
-        guild
-    } else {
-        ctx.reply("This command can only be run inside of a guild.").await?;
+    let Some(guild) = ctx.guild_id() else {
+        ctx.reply("This command must be ran within a guild.").await?;
         return Ok(());
     };
 

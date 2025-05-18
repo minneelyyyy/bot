@@ -5,10 +5,8 @@ use poise::serenity_prelude as serenity;
 
 #[poise::command(slash_command, prefix_command, required_permissions = "MANAGE_ROLES")]
 pub async fn remove(ctx: Context<'_>, user: serenity::User) -> Result<(), Error> {
-    let guild = if let Some(guild) = ctx.guild_id() {
-        guild
-    } else {
-        ctx.reply("This command can only be run inside of a guild.").await?;
+    let Some(guild) = ctx.guild_id() else {
+        ctx.reply("This command must be ran within a guild.").await?;
         return Ok(());
     };
 

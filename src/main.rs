@@ -55,9 +55,8 @@ async fn event_handler(
 }
 
 async fn get_prefix(ctx: PartialContext<'_, Data, Error>) -> Result<Option<String>, Error> {
-    let guild = match ctx.guild_id {
-        Some(guild) => guild,
-        None => return Ok(ctx.data.prefix.clone()),
+    let Some(guild) = ctx.guild_id else {
+        return Ok(ctx.data.prefix.clone());
     };
 
     let db = &ctx.data.database;

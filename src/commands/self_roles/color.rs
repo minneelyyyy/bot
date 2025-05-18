@@ -73,10 +73,8 @@ pub async fn color(ctx: Context<'_>,
         Color::from_rgb(rgb.r, rgb.g, rgb.b)
     };
 
-    let guild = if let Some(guild) = ctx.guild_id() {
-        guild
-    } else {
-        ctx.reply("This command can only be run inside of a guild.").await?;
+    let Some(guild) = ctx.guild_id() else {
+        ctx.reply("This command must be ran within a guild.").await?;
         return Ok(());
     };
 
