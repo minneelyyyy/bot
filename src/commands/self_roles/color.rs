@@ -5,7 +5,7 @@ use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
 use hex_color::HexColor;
-use poise::serenity_prelude::{colours, Color, EditRole};
+use poise::serenity_prelude::{colours, Color, User, GuildId, RoleId, EditRole};
 
 static COLORS: Lazy<HashMap<&'static str, Color>> = Lazy::new(|| {
     HashMap::from([
@@ -59,6 +59,25 @@ async fn autocomplete_colors<'a>(
     COLORS.clone().into_keys().filter(move |x| x.split_whitespace().any(|x| x.starts_with(partial)))
 }
 
+pub fn parse_color(s: &str) -> Result<Color, Error> {
+    let color = if let Some(named) = COLORS.get(s) {
+        named.clone()
+    } else {
+        let rgb = HexColor::parse_rgb(&s)?;
+        Color::from_rgb(rgb.r, rgb.g, rgb.b)
+    };
+
+    Ok(color)
+}
+
+pub async fn change_user_role_color(ctx: Context<'_>, user: &User, guild: GuildId, color: Color) -> Result<RoleId, Error> {
+    let mut tx = ctx.data().database.begin().await?;
+    let role = super::edit_role(ctx, user.id, guild, EditRole::new().colour(color), &mut *tx).await?;
+    tx.commit().await?;
+
+    Ok(role)
+}
+
 /// Change the color of your personal role
 #[poise::command(slash_command, prefix_command)]
 pub async fn color(ctx: Context<'_>,
@@ -66,22 +85,12 @@ pub async fn color(ctx: Context<'_>,
     #[rest]
     color: String) -> Result<(), Error>
 {
-    let color = if let Some(named) = COLORS.get(color.as_str()) {
-        named.clone()
-    } else {
-        let rgb = HexColor::parse_rgb(&color)?;
-        Color::from_rgb(rgb.r, rgb.g, rgb.b)
-    };
-
     let guild = ctx.guild_id().ok_or(BigBirbError::GuildOnly)?;
-
     let user = ctx.author();
+    let color = parse_color(&color)?;
 
-    let mut tx = ctx.data().database.begin().await?;
-    let role = super::edit_role(ctx, user.id, guild, EditRole::new().colour(color), &mut *tx).await?;
-    tx.commit().await?;
-
-    common::no_ping_reply(&ctx, format!("{}'s color has been updated.", guild.role(ctx, role).await?)).await?;
+    let role = guild.role(ctx, change_user_role_color(ctx, &user, guild, color).await?).await?;
+    common::no_ping_reply(&ctx, format!("{role}'s color has been updated.")).await?;
 
     Ok(())
 }

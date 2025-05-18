@@ -3,26 +3,41 @@ use crate::common::{Context, Error};
 use sqlx::{PgConnection, Row};
 use poise::serenity_prelude::{EditRole, GuildId, Permissions, RoleId, UserId};
 
-mod register;
 mod whois;
-mod color;
-mod name;
+pub mod color;
+pub mod name;
 mod disown;
-mod remove;
+
+mod admin;
 
 #[poise::command(
     prefix_command,
     slash_command,
     subcommands(
-        "register::register",
-        "whois::whois",
-        "color::color",
         "name::name",
+        "color::color",
         "disown::disown",
-        "remove::remove",
+        "whois::whois",
     )
 )]
 pub async fn role(_ctx: Context<'_>) -> Result<(), Error> {
+    Ok(())
+}
+
+#[poise::command(
+    prefix_command,
+    slash_command,
+    subcommands(
+        "admin::name",
+        "admin::color",
+        "admin::remove",
+        "admin::set",
+        "admin::give",
+        "whois::whois",
+    ),
+    required_permissions = "MANAGE_ROLES",
+)]
+pub async fn editrole(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
@@ -103,6 +118,19 @@ pub async fn get_user_role(user: UserId, guild: GuildId, db: &mut PgConnection) 
         .fetch_one(db).await
     {
         Ok(row) => Ok(Some(RoleId::new(row.try_get::<i64, usize>(0)? as u64))),
+        Err(sqlx::Error::RowNotFound) => Ok(None),
+        Err(e) => return Err(Box::new(e)),
+    }
+}
+
+/// Get a user from the role id
+pub async fn get_user_by_role(role: RoleId, guild: GuildId, db: &mut PgConnection) -> Result<Option<UserId>, Error> {
+    match sqlx::query("SELECT userid FROM selfroles WHERE roleid = $1 AND guildid = $2")
+        .bind(role.get() as i64)
+        .bind(guild.get() as i64)
+        .fetch_one(db).await
+    {
+        Ok(row) => Ok(Some(UserId::new(row.try_get::<i64, usize>(0)? as u64))),
         Err(sqlx::Error::RowNotFound) => Ok(None),
         Err(e) => return Err(Box::new(e)),
     }

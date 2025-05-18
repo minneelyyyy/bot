@@ -38,6 +38,7 @@ pub fn commands() -> Vec<Command<Data, Error>> {
         gambling::blackjack::blackjack(),
         eval::eval(),
         self_roles::role(),
+        self_roles::editrole(),
         settings::setting(),
         administration::ban::ban(),
         administration::ban::unban(),
