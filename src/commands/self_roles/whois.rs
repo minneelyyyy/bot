@@ -25,7 +25,7 @@ pub async fn whois(ctx: Context<'_>, role: serenity::Role) -> Result<(), Error> 
 
         let member = guild.member(ctx, user).await?;
 
-        common::no_ping_reply(&ctx, format!("{} owns this role.", member)).await?;
+        common::no_ping_reply(&ctx, format!("{member} owns this role.")).await?;
     } else {
         ctx.reply("This command must be used within a server!").await?;
     }

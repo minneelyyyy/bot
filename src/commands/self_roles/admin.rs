@@ -50,9 +50,9 @@ pub async fn remove(ctx: Context<'_>, user: User) -> Result<(), Error> {
         guild.delete_role(ctx, role).await?;
         super::remove_role(role, guild, &mut *tx).await?;
         tx.commit().await?;
-        common::no_ping_reply(&ctx, format!("{}'s self role has been deleted.", user)).await?;
+        common::no_ping_reply(&ctx, format!("{user}'s self role has been deleted.")).await?;
     } else {
-        common::no_ping_reply(&ctx, format!("{} has no self role.", user)).await?;
+        common::no_ping_reply(&ctx, format!("{user} has no self role.")).await?;
     }
 
     Ok(())
@@ -103,11 +103,13 @@ pub async fn give(ctx: Context<'_>, user: User, role: Role, force: Option<bool>)
         member.add_role(ctx, role.id).await?;
     } else {
         if let Some(original) = super::get_user_role(member.user.id, guild, &mut *tx).await? {
+            let original = guild.role(ctx, original).await?;
             common::no_ping_reply(&ctx, format!("{original} is already set as this user's self role, enable force to overwrite.")).await?;
             return Ok(());
         }
 
         if let Some(owner) = super::get_user_by_role(role.id, guild, &mut *tx).await? {
+            let owner = owner.to_user(ctx).await?;
             common::no_ping_reply(&ctx, format!("{role} is already owned by {owner}, enable force to overwrite.")).await?;
             return Ok(());
         }

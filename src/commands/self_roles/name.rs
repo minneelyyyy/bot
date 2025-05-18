@@ -17,7 +17,7 @@ pub async fn name(ctx: Context<'_>, #[rest] name: String) -> Result<(), Error> {
     let user = ctx.author();
 
     let role = guild.role(ctx, change_user_role_name(ctx, user, guild, name).await?).await?;
-    common::no_ping_reply(&ctx, format!("{} has been updated.", role)).await?;
+    common::no_ping_reply(&ctx, format!("{role} has been updated.")).await?;
 
     Ok(())
 }
