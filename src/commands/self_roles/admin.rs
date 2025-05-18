@@ -58,6 +58,24 @@ pub async fn remove(ctx: Context<'_>, user: User) -> Result<(), Error> {
     Ok(())
 }
 
+/// Remove a selfrole from the database without deleting it or attempting to take it from the user
+#[poise::command(slash_command, prefix_command, required_permissions = "MANAGE_ROLES")]
+pub async fn forget(ctx: Context<'_>, user: User) -> Result<(), Error> {
+    let guild = ctx.guild_id().ok_or(BigBirbError::GuildOnly)?;
+    let mut tx = ctx.data().database.begin().await?;
+
+    if let Some(role) = super::get_user_role(user.id, guild, &mut *tx).await? {
+        super::remove_role(role, guild, &mut *tx).await?;
+        common::no_ping_reply(&ctx, format!("{user}'s selfrole has been forgotten.")).await?;
+    } else {
+        common::no_ping_reply(&ctx, format!("{user} has no selfrole set.")).await?;
+    }
+
+    tx.commit().await?;
+
+    Ok(())
+}
+
 /// Give a user an existing role as their self role
 #[poise::command(slash_command, prefix_command, required_permissions = "MANAGE_ROLES")]
 pub async fn give(ctx: Context<'_>, user: User, role: Role, force: Option<bool>) -> Result<(), Error> {

@@ -31,6 +31,7 @@ pub async fn role(_ctx: Context<'_>) -> Result<(), Error> {
         "admin::name",
         "admin::color",
         "admin::remove",
+        "admin::forget",
         "admin::set",
         "admin::give",
         "whois::whois",
