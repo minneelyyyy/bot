@@ -1,5 +1,5 @@
 
-use crate::common::{self, Context, Error};
+use crate::common::{self, Context, Error, BigBirbError};
 
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -73,10 +73,7 @@ pub async fn color(ctx: Context<'_>,
         Color::from_rgb(rgb.r, rgb.g, rgb.b)
     };
 
-    let Some(guild) = ctx.guild_id() else {
-        ctx.reply("This command must be ran within a guild.").await?;
-        return Ok(());
-    };
+    let guild = ctx.guild_id().ok_or(BigBirbError::GuildOnly)?;
 
     let user = ctx.author();
 

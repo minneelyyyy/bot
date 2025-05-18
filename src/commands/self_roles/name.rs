@@ -1,15 +1,12 @@
 
-use crate::common::{self, Context, Error};
+use crate::common::{self, Context, Error, BigBirbError};
 
 use poise::serenity_prelude::EditRole;
 
 /// Change the name of your personal role
 #[poise::command(slash_command, prefix_command)]
 pub async fn name(ctx: Context<'_>, #[rest] name: String) -> Result<(), Error> {
-    let Some(guild) = ctx.guild_id() else {
-        ctx.reply("This command must be ran within a guild.").await?;
-        return Ok(());
-    };
+    let guild = ctx.guild_id().ok_or(BigBirbError::GuildOnly)?;
     let user = ctx.author();
 
     let mut tx = ctx.data().database.begin().await?;

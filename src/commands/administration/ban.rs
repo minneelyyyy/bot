@@ -1,4 +1,4 @@
-use crate::common::{Context, Error};
+use crate::common::{Context, Error, BigBirbError};
 use crate::commands::settings;
 
 use poise::serenity_prelude as serenity;
@@ -10,10 +10,7 @@ pub async fn ban(ctx: Context<'_>,
     #[rest]
     reason: Option<String>) -> Result<(), Error>
 {
-    let Some(guild) = ctx.guild_id() else {
-        ctx.reply("This command must be ran within a guild.").await?;
-        return Ok(());
-    };
+    let guild = ctx.guild_id().ok_or(BigBirbError::GuildOnly)?;
 
     if let Some(role) = settings::get_banrole(ctx, guild).await? {
         let member = guild.member(&ctx, user.id).await?;
@@ -32,10 +29,7 @@ pub async fn ban(ctx: Context<'_>,
 #[poise::command(slash_command, prefix_command)]
 pub async fn unban(ctx: Context<'_>, user: serenity::User) -> Result<(), Error>
 {
-    let Some(guild) = ctx.guild_id() else {
-        ctx.reply("This command must be ran within a guild.").await?;
-        return Ok(());
-    };
+    let guild = ctx.guild_id().ok_or(BigBirbError::GuildOnly)?;
 
     if let Some(role) = settings::get_banrole(ctx, guild).await? {
         let member = guild.member(&ctx, user.id).await?;

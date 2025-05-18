@@ -1,14 +1,10 @@
 
-use crate::common::{Context, Error};
+use crate::common::{Context, Error, BigBirbError};
 
 /// Remove and delete your personal role
 #[poise::command(slash_command, prefix_command)]
 pub async fn disown(ctx: Context<'_>) -> Result<(), Error> {
-    let Some(guild) = ctx.guild_id() else {
-        ctx.reply("This command must be ran within a guild.").await?;
-        return Ok(());
-    };
-
+    let guild = ctx.guild_id().ok_or(BigBirbError::GuildOnly)?;
     let user = ctx.author();
 
     let mut tx = ctx.data().database.begin().await?;

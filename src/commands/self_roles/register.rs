@@ -1,16 +1,12 @@
 
-use crate::common::{self, Context, Error};
+use crate::common::{self, Context, Error, BigBirbError};
 
 use poise::serenity_prelude as serenity;
 
 /// Register an existing role as a user's custom role. This deletes their current self role.
 #[poise::command(slash_command, prefix_command, required_permissions = "MANAGE_ROLES")]
 pub async fn register(ctx: Context<'_>, user: serenity::User, role: serenity::Role) -> Result<(), Error> {
-    let Some(guild) = ctx.guild_id() else {
-        ctx.reply("This command must be ran within a guild.").await?;
-        return Ok(());
-    };
-
+    let guild = ctx.guild_id().ok_or(BigBirbError::GuildOnly)?;
     let mut tx = ctx.data().database.begin().await?;
 
     if let Some(role) = super::get_user_role(user.id, guild, &mut *tx).await? {
