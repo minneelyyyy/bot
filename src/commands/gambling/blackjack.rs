@@ -106,6 +106,9 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
     let mut tx = ctx.data().database.begin().await?;
     let mut balance = super::get_balance(ctx.author().id, &mut *tx).await?;
 
+    // whether the player is going to time out in the next 60 seconds
+    let mut timeout = false;
+
     let amount = match amount.to_lowercase().as_str() {
         "all" => balance,
         "half" => balance / 2,
@@ -165,7 +168,7 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
                         "**Dealer's hand**: {} ({})\n",
                         "**Your hand**: {} ({})\n\n",
                         "**Bet**: {}\n",
-                        "Bust! You've lost **{}** tokens."
+                        "Bust! You've lost **{}** token(s)."
                     ),
                     dealers_hand.iter().map(|card| format!("`{card}`")).collect::<Vec<String>>().join(", "),
                     dealers_count,
@@ -194,13 +197,15 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
                         concat!(
                             "**Dealer's hand**: {} ({})\n",
                             "**Your hand**: {} ({})\n\n",
-                            "**Bet**: {}"
+                            "**Bet**: {}",
+                            "{}"
                         ),
                         format!("`{}`, `XX`", dealers_hand[0]),
                         dealers_hand[0].value(matches!(dealers_hand[0], Card { rank: Rank::Ace, .. })),
                         players_hand.iter().map(|card| format!("`{card}`")).collect::<Vec<String>>().join(", "),
                         players_count,
                         amount,
+                        if timeout { "\n*You have 60 seconds to make a decision.*" } else { "" }
                     )
                 )
                 .components(components)
@@ -209,10 +214,36 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
         msg.edit(ctx, reply).await?;
 
         let Some(mci) = serenity::ComponentInteractionCollector::new(ctx.serenity_context())
-            .timeout(Duration::from_secs(120))
+            .timeout(Duration::from_secs(60))
             .filter(move |mci| mci.data.custom_id.starts_with("blackjack")).await else {
-                ctx.reply("failed interaction!").await?;
-                return Ok(());
+                if timeout {
+                    msg.edit(ctx, poise::CreateReply::default()
+                        .components(vec![])
+                        .content(
+                            format!(
+                                concat!(
+                                    "**Dealer's hand**: {} ({})\n",
+                                    "**Your hand**: {} ({})\n\n",
+                                    "**Bet**: {}\n",
+                                    "{}"
+                                ),
+                                dealers_hand.iter().map(|card| format!("`{card}`")).collect::<Vec<String>>().join(", "),
+                                dealers_count,
+                                players_hand.iter().map(|card| format!("`{card}`")).collect::<Vec<String>>().join(", "),
+                                players_count,
+                                amount, format!("No bets go without a game! You've lost **{amount}** token(s).")
+                            )
+                        )).await?;
+    
+                    balance -= amount;
+                    super::change_balance(ctx.author().id, balance, &mut *tx).await?;
+                    tx.commit().await?;
+    
+                    return Ok(());
+                } else {
+                    timeout = true;
+                    continue;
+                }
         };
 
         if mci.member.clone().unwrap().user.id != ctx.author().id {
@@ -224,6 +255,9 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
 
             continue;
         }
+
+        // Reset timeout after player interacts
+        timeout = false;
 
         mci.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge).await?;
 
@@ -251,20 +285,20 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
                         if players_count == 21 && players_hand.len() == 2 {
                             let amount = amount * 3 / 2;
                             balance += amount;
-                            format!("You've won with a Blackjack! You've gained **{amount}** tokens.")
+                            format!("You've won with a Blackjack! You've gained **{amount}** token(s).")
                         } else {
                             balance += amount;
-                            format!("You've won! **{amount}** tokens have been added to your account.")
+                            format!("You've won! **{amount}** token(s) have been added to your account.")
                         }
                     }
                     Ordering::Greater if dealers_count > 21 => {
                         if players_count == 21 && players_hand.len() == 2 {
                             let amount = amount * 3 / 2;
                             balance += amount;
-                            format!("You've won with a Blackjack! You've gained **{amount}** tokens.")
+                            format!("You've won with a Blackjack! You've gained **{amount}** token(s).")
                         } else {
                             balance += amount;
-                            format!("You've won! **{amount}** tokens have been added to your account.")
+                            format!("You've won! **{amount}** token(s) have been added to your account.")
                         }
                     }
                     Ordering::Equal => {
@@ -272,7 +306,7 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
                     }
                     Ordering::Greater => {
                         balance -= amount;
-                        format!("You've lost. **{amount}** tokens to the dealer.")
+                        format!("You've lost. **{amount}** token(s) to the dealer.")
                     }
                 };
 
