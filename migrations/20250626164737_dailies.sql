@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS dailies (
+  userid BIGINT NOT NULL PRIMARY KEY,
+  last TIMESTAMPTZ,
+  streak INT
+)

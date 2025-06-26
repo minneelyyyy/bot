@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS bank (
+  id BIGINT PRIMARY KEY,
+  balance INT
+)

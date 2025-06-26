@@ -1,0 +1,6 @@
+
+CREATE TABLE IF NOT EXISTS games (
+  id BIGSERIAL PRIMARY KEY,
+  name CHAR[255]
+)
+
