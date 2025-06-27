@@ -16,8 +16,8 @@ async fn autocomplete_shop<'a>(
     ctx: Context<'_>,
     partial: &'a str,
 ) -> impl Iterator<Item = serenity::AutocompleteChoice> + use<'a> {
-    let db = &ctx.data().database;
-    let balance = super::get_balance(ctx.author().id, db).await;
+    let mut tx = ctx.data().database.begin().await.unwrap();
+    let balance = super::get_balance(ctx.author().id, &mut *tx).await;
 
     ITEMS.values()
         .filter(move |(_, item)| item.name.contains(partial))

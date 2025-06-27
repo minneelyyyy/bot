@@ -1,58 +1,54 @@
 use crate::{Context, Error};
 
 use poise::serenity_prelude::{UserId, User};
-use sqlx::{types::chrono::{DateTime, Utc, TimeZone}, PgExecutor, Row};
+use sqlx::{types::chrono::{DateTime, TimeZone, Utc}, PgConnection};
 
 use std::time::Duration;
 
-async fn get_streak<'a, E>(db: E, user: UserId) -> Result<Option<i32>, Error>
-where
-    E: PgExecutor<'a>,
-{
-    match sqlx::query(
-            "SELECT streak FROM dailies WHERE userid = $1"
-        ).bind(user.get() as i64).fetch_one(db).await
-    {
-        Ok(row) => Ok(Some(row.get(0))),
-        Err(sqlx::Error::RowNotFound) => Ok(None),
-        Err(e) => Err(Box::new(e)),
-    }
+pub async fn get_streak(conn: &mut PgConnection, user: UserId) -> Result<Option<i32>, Error> {
+    let result = sqlx::query!(
+        "SELECT streak FROM dailies WHERE userid = $1",
+        user.get() as i64
+    )
+    .fetch_optional(conn)
+    .await?;
+
+    Ok(result.map(|r| r.streak).unwrap_or(None))
 }
 
-async fn set_streak<'a, E>(db: E, user: UserId, streak: i32) -> Result<(), Error>
-where
-    E: PgExecutor<'a>,
-{
-    sqlx::query("INSERT INTO dailies (userid, streak) VALUES ($1, $2) ON CONFLICT (userid) DO UPDATE SET streak = EXCLUDED.streak")
-        .bind(user.get() as i64)
-        .bind(streak)
-        .execute(db).await?;
+pub async fn set_streak(conn: &mut PgConnection, user: UserId, streak: i32) -> Result<(), Error> {
+    sqlx::query!(
+        "INSERT INTO dailies (userid, streak) VALUES ($1, $2)
+         ON CONFLICT (userid) DO UPDATE SET streak = EXCLUDED.streak",
+        user.get() as i64,
+        streak
+    )
+    .execute(conn)
+    .await?;
 
     Ok(())
 }
 
-async fn get_last<'a, E>(db: E, user: UserId) -> Result<Option<DateTime<Utc>>, Error>
-where
-    E: PgExecutor<'a>,
-{
-    match sqlx::query(
-            "SELECT last FROM dailies WHERE userid = $1"
-        ).bind(user.get() as i64).fetch_one(db).await
-    {
-        Ok(row) => Ok(Some(row.get(0))),
-        Err(sqlx::Error::RowNotFound) => Ok(None),
-        Err(e) => Err(Box::new(e)),
-    }
+pub async fn get_last(conn: &mut PgConnection, user: UserId) -> Result<Option<DateTime<Utc>>, Error> {
+    let result = sqlx::query!(
+        "SELECT last FROM dailies WHERE userid = $1",
+        user.get() as i64
+    )
+    .fetch_optional(conn)
+    .await?;
+
+    Ok(result.map(|r| r.last).unwrap_or(None))
 }
 
-async fn set_last<'a, E>(db: E, user: UserId, last: DateTime<Utc>) -> Result<(), Error>
-where
-    E: PgExecutor<'a>,
-{
-    sqlx::query("INSERT INTO dailies (userid, last) VALUES ($1, $2) ON CONFLICT (userid) DO UPDATE SET last = EXCLUDED.last")
-        .bind(user.get() as i64)
-        .bind(last)
-        .execute(db).await?;
+pub async fn set_last(conn: &mut PgConnection, user: UserId, last: DateTime<Utc>) -> Result<(), Error> {
+    sqlx::query!(
+        "INSERT INTO dailies (userid, last) VALUES ($1, $2)
+         ON CONFLICT (userid) DO UPDATE SET last = EXCLUDED.last",
+        user.get() as i64,
+        last
+    )
+    .execute(conn)
+    .await?;
 
     Ok(())
 }
@@ -60,13 +56,14 @@ where
 /// Tells you what your current daily streak is
 #[poise::command(slash_command, prefix_command)]
 pub async fn streak(ctx: Context<'_>, user: Option<User>) -> Result<(), Error> {
-    let db = &ctx.data().database;
+    let mut tx = ctx.data().database.begin().await?;
+
     let (user, who) = match user {
         Some(user) => (user.id, format!("{} has", user.display_name())),
         None => (ctx.author().id, "You have".to_string()),
     };
 
-    ctx.reply(format!("{who} a daily streak of **{}**", get_streak(db, user).await?.unwrap_or(0))).await?;
+    ctx.reply(format!("{who} a daily streak of **{}**", get_streak(&mut tx, user).await?.unwrap_or(0))).await?;
     Ok(())
 }
 

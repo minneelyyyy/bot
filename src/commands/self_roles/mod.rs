@@ -1,6 +1,6 @@
 
 use crate::common::{Context, Error};
-use sqlx::{PgConnection, Row};
+use sqlx::PgConnection;
 use poise::serenity_prelude::{EditRole, GuildId, Permissions, RoleId, UserId};
 
 mod whois;
@@ -83,18 +83,14 @@ async fn create_role(
 
 /// Remove a row concerning a user's self role from the database
 pub async fn remove_user_role(user: UserId, guild: GuildId, db: &mut PgConnection) -> Result<(), Error> {
-    sqlx::query("DELETE FROM selfroles WHERE userid = $1 AND guildid = $2")
-        .bind(user.get() as i64)
-        .bind(guild.get() as i64)
+    sqlx::query!("DELETE FROM selfroles WHERE userid = $1 AND guildid = $2", user.get() as i64, guild.get() as i64)
         .execute(db).await?;
 
     Ok(())
 }
 
 pub async fn remove_role(role: RoleId, guild: GuildId, db: &mut PgConnection) -> Result<(), Error> {
-    sqlx::query("DELETE FROM selfroles WHERE roleid = $1 AND guildid = $2")
-        .bind(role.get() as i64)
-        .bind(guild.get() as i64)
+    sqlx::query!("DELETE FROM selfroles WHERE roleid = $1 AND guildid = $2", role.get() as i64, guild.get() as i64)
         .execute(db).await?;
 
     Ok(())
@@ -102,10 +98,10 @@ pub async fn remove_role(role: RoleId, guild: GuildId, db: &mut PgConnection) ->
 
 /// Replace a user's custom role with a new one
 pub async fn update_user_role(user: UserId, guild: GuildId, role: RoleId, db: &mut PgConnection) -> Result<(), Error> {
-    sqlx::query("INSERT INTO selfroles (userid, guildid, roleid) VALUES($1, $2, $3) ON CONFLICT (userid, guildid) DO UPDATE SET roleid = EXCLUDED.roleid")
-        .bind(user.get() as i64)
-        .bind(guild.get() as i64)
-        .bind(role.get() as i64)
+    sqlx::query!(
+            r#"INSERT INTO selfroles (userid, guildid, roleid) VALUES($1, $2, $3)
+            ON CONFLICT (userid, guildid) DO UPDATE SET roleid = EXCLUDED.roleid"#,
+            user.get() as i64, guild.get() as i64, role.get() as i64)
         .execute(db).await?;
 
     Ok(())
@@ -113,12 +109,10 @@ pub async fn update_user_role(user: UserId, guild: GuildId, role: RoleId, db: &m
 
 /// Get a user's personal role id from the database
 pub async fn get_user_role(user: UserId, guild: GuildId, db: &mut PgConnection) -> Result<Option<RoleId>, Error> {
-    match sqlx::query("SELECT roleid FROM selfroles WHERE userid = $1 AND guildid = $2")
-        .bind(user.get() as i64)
-        .bind(guild.get() as i64)
+    match sqlx::query!("SELECT roleid FROM selfroles WHERE userid = $1 AND guildid = $2", user.get() as i64, guild.get() as i64)
         .fetch_one(db).await
     {
-        Ok(row) => Ok(Some(RoleId::new(row.try_get::<i64, usize>(0)? as u64))),
+        Ok(row) => Ok(Some(RoleId::new(row.roleid.unwrap() as u64))),
         Err(sqlx::Error::RowNotFound) => Ok(None),
         Err(e) => return Err(Box::new(e)),
     }
@@ -126,12 +120,10 @@ pub async fn get_user_role(user: UserId, guild: GuildId, db: &mut PgConnection) 
 
 /// Get a user from the role id
 pub async fn get_user_by_role(role: RoleId, guild: GuildId, db: &mut PgConnection) -> Result<Option<UserId>, Error> {
-    match sqlx::query("SELECT userid FROM selfroles WHERE roleid = $1 AND guildid = $2")
-        .bind(role.get() as i64)
-        .bind(guild.get() as i64)
+    match sqlx::query!("SELECT userid FROM selfroles WHERE roleid = $1 AND guildid = $2", role.get() as i64, guild.get() as i64)
         .fetch_one(db).await
     {
-        Ok(row) => Ok(Some(UserId::new(row.try_get::<i64, usize>(0)? as u64))),
+        Ok(row) => Ok(Some(UserId::new(row.userid as u64))),
         Err(sqlx::Error::RowNotFound) => Ok(None),
         Err(e) => return Err(Box::new(e)),
     }
