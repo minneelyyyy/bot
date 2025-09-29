@@ -1,5 +1,4 @@
-
-use crate::common::{Context, Error, BigBirbError};
+use crate::common::{BigBirbError, Context, Error};
 
 /// Remove and delete your personal role
 #[poise::command(slash_command, prefix_command)]
@@ -15,7 +14,8 @@ pub async fn disown(ctx: Context<'_>) -> Result<(), Error> {
         tx.commit().await?;
         ctx.reply("Your self role has been deleted.").await?;
     } else {
-        ctx.reply("You currently have no self role to delete.").await?;
+        ctx.reply("You currently have no self role to delete.")
+            .await?;
     }
 
     Ok(())

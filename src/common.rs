@@ -1,6 +1,6 @@
-use std::{error, fmt};
 use poise::ReplyHandle;
 use sqlx::{Pool, Postgres};
+use std::{error, fmt};
 
 pub struct Data {
     pub database: Pool<Postgres>,
@@ -13,13 +13,18 @@ pub type Context<'a> = poise::Context<'a, Data, Error>;
 use poise::serenity_prelude::builder::CreateAllowedMentions;
 use poise::CreateReply;
 
-pub async fn no_ping_reply<'a>(ctx: &'a Context<'_>, text: impl Into<String>) -> Result<ReplyHandle<'a>, Error> {
-    Ok(ctx.send(
-        CreateReply::default()
-            .content(text.into())
-            .reply(true)
-            .allowed_mentions(CreateAllowedMentions::new())
-    ).await?)
+pub async fn no_ping_reply<'a>(
+    ctx: &'a Context<'_>,
+    text: impl Into<String>,
+) -> Result<ReplyHandle<'a>, Error> {
+    Ok(ctx
+        .send(
+            CreateReply::default()
+                .content(text.into())
+                .reply(true)
+                .allowed_mentions(CreateAllowedMentions::new()),
+        )
+        .await?)
 }
 
 #[derive(Debug, Clone, Copy)]

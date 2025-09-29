@@ -1,4 +1,3 @@
-
 use crate::common::{self, Context, Error};
 use poise::serenity_prelude as serenity;
 
@@ -10,13 +9,19 @@ pub async fn balance(ctx: Context<'_>, user: Option<serenity::User>) -> Result<(
 
     let wealth = super::get_balance(user.id, db).await?;
 
-    common::no_ping_reply(&ctx, format!("{} **{}** token(s).",
-        if user.id == ctx.author().id {
-            "You have".to_string()
-        } else {
-            format!("{} has", user)
-        }, wealth)
-    ).await?;
+    common::no_ping_reply(
+        &ctx,
+        format!(
+            "{} **{}** token(s).",
+            if user.id == ctx.author().id {
+                "You have".to_string()
+            } else {
+                format!("{} has", user)
+            },
+            wealth
+        ),
+    )
+    .await?;
 
     Ok(())
 }

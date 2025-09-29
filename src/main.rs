@@ -3,14 +3,14 @@ mod commands;
 pub mod common;
 pub mod inventory;
 use crate::commands::self_roles;
-use crate::common::{Context, Error, Data};
+use crate::common::{Context, Data, Error};
 
 use std::env;
 use std::sync::Arc;
 
+use clap::Parser;
 use poise::serenity_prelude::{self as serenity};
 use poise::PartialContext;
-use clap::Parser;
 
 use sqlx::postgres::PgPoolOptions;
 use sqlx::Row;
@@ -29,8 +29,12 @@ async fn event_handler(
     data: &Data,
 ) -> Result<(), Error> {
     match event {
-        serenity::FullEvent::Message { new_message: message } => {
-            if message.author.bot { return Ok(()) }
+        serenity::FullEvent::Message {
+            new_message: message,
+        } => {
+            if message.author.bot {
+                return Ok(());
+            }
         }
         serenity::FullEvent::GuildMemberRemoval { guild_id, user, .. } => {
             let mut tx = data.database.begin().await?;
@@ -40,8 +44,12 @@ async fn event_handler(
                 self_roles::remove_role(role, *guild_id, &mut *tx).await?;
                 tx.commit().await?;
             }
-        },
-        serenity::FullEvent::GuildRoleDelete { guild_id, removed_role_id, .. } => {
+        }
+        serenity::FullEvent::GuildRoleDelete {
+            guild_id,
+            removed_role_id,
+            ..
+        } => {
             let mut tx = data.database.begin().await?;
 
             self_roles::remove_role(*removed_role_id, *guild_id, &mut *tx).await?;
@@ -63,7 +71,8 @@ async fn get_prefix(ctx: PartialContext<'_, Data, Error>) -> Result<Option<Strin
 
     let prefix = match sqlx::query("SELECT prefix FROM settings WHERE guildid = $1")
         .bind(guild.get() as i64)
-        .fetch_one(db).await
+        .fetch_one(db)
+        .await
     {
         Ok(r) => r.get(0),
         Err(sqlx::Error::RowNotFound) => None,
@@ -80,21 +89,26 @@ async fn main() -> Result<(), Error> {
 
     let token = env::var("DISCORD_BOT_TOKEN")?;
     let database_url = env::var("DATABASE_URL")?;
-    let intents = args.prefix.clone().map(|_|
-        serenity::GatewayIntents::GUILD_MESSAGES
-            | serenity::GatewayIntents::DIRECT_MESSAGES
-            | serenity::GatewayIntents::MESSAGE_CONTENT)
+    let intents = args
+        .prefix
+        .clone()
+        .map(|_| {
+            serenity::GatewayIntents::GUILD_MESSAGES
+                | serenity::GatewayIntents::DIRECT_MESSAGES
+                | serenity::GatewayIntents::MESSAGE_CONTENT
+        })
         .unwrap_or(serenity::GatewayIntents::empty())
-            | serenity::GatewayIntents::GUILD_MEMBERS
-            | serenity::GatewayIntents::GUILDS;
+        | serenity::GatewayIntents::GUILD_MEMBERS
+        | serenity::GatewayIntents::GUILDS;
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
             commands: commands::commands(),
             prefix_options: poise::PrefixFrameworkOptions {
                 dynamic_prefix: Some(|ctx| Box::pin(get_prefix(ctx))),
-                edit_tracker: Some(Arc::new(
-                    poise::EditTracker::for_timespan(std::time::Duration::from_secs(10)))),
+                edit_tracker: Some(Arc::new(poise::EditTracker::for_timespan(
+                    std::time::Duration::from_secs(10),
+                ))),
                 case_insensitive_commands: true,
                 ..Default::default()
             },
@@ -109,7 +123,8 @@ async fn main() -> Result<(), Error> {
 
                 let database = PgPoolOptions::new()
                     .max_connections(5)
-                    .connect(&database_url).await?;
+                    .connect(&database_url)
+                    .await?;
 
                 sqlx::query(
                     r#"
@@ -118,7 +133,9 @@ async fn main() -> Result<(), Error> {
                         balance INT
                     )
                     "#,
-                ).execute(&database).await?;
+                )
+                .execute(&database)
+                .await?;
 
                 sqlx::query(
                     r#"
@@ -129,7 +146,9 @@ async fn main() -> Result<(), Error> {
                         UNIQUE (userid, guildid)
                     )
                     "#,
-                ).execute(&database).await?;
+                )
+                .execute(&database)
+                .await?;
 
                 sqlx::query(
                     r#"
@@ -137,8 +156,10 @@ async fn main() -> Result<(), Error> {
                         id BIGSERIAL PRIMARY KEY,
                         name CHAR[255]
                     )
-                    "#
-                ).execute(&database).await?;
+                    "#,
+                )
+                .execute(&database)
+                .await?;
 
                 sqlx::query(
                     r#"
@@ -150,8 +171,10 @@ async fn main() -> Result<(), Error> {
                         data JSON NOT NULL,
                         name TEXT
                     )
-                    "#
-                ).execute(&database).await?;
+                    "#,
+                )
+                .execute(&database)
+                .await?;
 
                 sqlx::query(
                     r#"
@@ -160,8 +183,10 @@ async fn main() -> Result<(), Error> {
                         last TIMESTAMPTZ,
                         streak INT
                     )
-                    "#
-                ).execute(&database).await?;
+                    "#,
+                )
+                .execute(&database)
+                .await?;
 
                 sqlx::query(
                     r#"
@@ -172,17 +197,24 @@ async fn main() -> Result<(), Error> {
                         hoist_selfroles BOOLEAN,
                         prefix TEXT
                     )
-                    "#
-                ).execute(&database).await?;
+                    "#,
+                )
+                .execute(&database)
+                .await?;
 
                 println!("Bot is ready!");
 
-                Ok(Data { database, prefix: args.prefix })
+                Ok(Data {
+                    database,
+                    prefix: args.prefix,
+                })
             })
         })
         .build();
 
-    let client = serenity::ClientBuilder::new(token, intents).framework(framework).await;
+    let client = serenity::ClientBuilder::new(token, intents)
+        .framework(framework)
+        .await;
 
     client.unwrap().start().await?;
 

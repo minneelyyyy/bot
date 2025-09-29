@@ -1,14 +1,19 @@
+use crate::common::{self, BigBirbError, Context, Error};
 
-use crate::common::{self, Context, Error, BigBirbError};
-
-use poise::serenity_prelude::{User, Role};
+use poise::serenity_prelude::{Role, User};
 
 /// Change the name of a user's personal role
 #[poise::command(slash_command, prefix_command, required_permissions = "MANAGE_ROLES")]
 pub async fn name(ctx: Context<'_>, user: User, #[rest] name: String) -> Result<(), Error> {
     let guild = ctx.guild_id().ok_or(BigBirbError::GuildOnly)?;
 
-    let role = guild.role(ctx, super::name::change_user_role_name(ctx, &user, guild, name).await?).await?;
+    let role = guild
+        .role(
+            ctx,
+            super::name::change_user_role_name(ctx, &user, guild, name).await?,
+        )
+        .await?;
+
     common::no_ping_reply(&ctx, format!("{role} has been updated.")).await?;
 
     Ok(())
@@ -16,11 +21,17 @@ pub async fn name(ctx: Context<'_>, user: User, #[rest] name: String) -> Result<
 
 /// Change the name of a user's personal role
 #[poise::command(slash_command, prefix_command, required_permissions = "MANAGE_ROLES")]
-pub async fn color(ctx: Context<'_>, user: User, color: String) -> Result<(), Error> {
+pub async fn color(ctx: Context<'_>, user: User, #[rest] color: String) -> Result<(), Error> {
     let guild = ctx.guild_id().ok_or(BigBirbError::GuildOnly)?;
     let color = super::color::parse_color(&color)?;
 
-    let role = guild.role(ctx, super::color::change_user_role_color(ctx, &user, guild, color).await?).await?;
+    let role = guild
+        .role(
+            ctx,
+            super::color::change_user_role_color(ctx, &user, guild, color).await?,
+        )
+        .await?;
+
     common::no_ping_reply(&ctx, format!("{role}'s color has been updated.")).await?;
 
     Ok(())
@@ -28,12 +39,22 @@ pub async fn color(ctx: Context<'_>, user: User, color: String) -> Result<(), Er
 
 /// Change a user's role name and color at once
 #[poise::command(slash_command, prefix_command, required_permissions = "MANAGE_ROLES")]
-pub async fn set(ctx: Context<'_>, user: User, color: String, #[rest] name: String) -> Result<(), Error> {
+pub async fn set(
+    ctx: Context<'_>,
+    user: User,
+    color: String,
+    #[rest] name: String,
+) -> Result<(), Error> {
     let guild = ctx.guild_id().ok_or(BigBirbError::GuildOnly)?;
     let color = super::color::parse_color(&color)?;
 
     super::color::change_user_role_color(ctx, &user, guild, color).await?;
-    let role = guild.role(ctx, super::name::change_user_role_name(ctx, &user, guild, name).await?).await?;
+    let role = guild
+        .role(
+            ctx,
+            super::name::change_user_role_name(ctx, &user, guild, name).await?,
+        )
+        .await?;
 
     common::no_ping_reply(&ctx, format!("{role} has been updated.")).await?;
 
@@ -41,7 +62,12 @@ pub async fn set(ctx: Context<'_>, user: User, color: String, #[rest] name: Stri
 }
 
 /// Remove and delete user's self role
-#[poise::command(slash_command, prefix_command, aliases("disown"), required_permissions = "MANAGE_ROLES")]
+#[poise::command(
+    slash_command,
+    prefix_command,
+    aliases("disown"),
+    required_permissions = "MANAGE_ROLES"
+)]
 pub async fn remove(ctx: Context<'_>, user: User) -> Result<(), Error> {
     let guild = ctx.guild_id().ok_or(BigBirbError::GuildOnly)?;
     let mut tx = ctx.data().database.begin().await?;
@@ -78,7 +104,12 @@ pub async fn forget(ctx: Context<'_>, user: User) -> Result<(), Error> {
 
 /// Give a user an existing role as their self role
 #[poise::command(slash_command, prefix_command, required_permissions = "MANAGE_ROLES")]
-pub async fn give(ctx: Context<'_>, user: User, role: Role, force: Option<bool>) -> Result<(), Error> {
+pub async fn give(
+    ctx: Context<'_>,
+    user: User,
+    role: Role,
+    force: Option<bool>,
+) -> Result<(), Error> {
     let guild = ctx.guild_id().ok_or(BigBirbError::GuildOnly)?;
     let force = force.unwrap_or(false);
     let member = guild.member(ctx, user).await?;
@@ -110,7 +141,11 @@ pub async fn give(ctx: Context<'_>, user: User, role: Role, force: Option<bool>)
 
         if let Some(owner) = super::get_user_by_role(role.id, guild, &mut *tx).await? {
             let owner = owner.to_user(ctx).await?;
-            common::no_ping_reply(&ctx, format!("{role} is already owned by {owner}, enable force to overwrite.")).await?;
+            common::no_ping_reply(
+                &ctx,
+                format!("{role} is already owned by {owner}, enable force to overwrite."),
+            )
+            .await?;
             return Ok(());
         }
 
@@ -119,7 +154,11 @@ pub async fn give(ctx: Context<'_>, user: User, role: Role, force: Option<bool>)
 
     tx.commit().await?;
 
-    common::no_ping_reply(&ctx, format!("{member} has been given the self role {role}.")).await?;
+    common::no_ping_reply(
+        &ctx,
+        format!("{member} has been given the self role {role}."),
+    )
+    .await?;
 
     Ok(())
 }

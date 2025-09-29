@@ -1,5 +1,8 @@
-use crate::{common::{Context, Error}, inventory::Inventory};
 use super::Effect;
+use crate::{
+    common::{Context, Error},
+    inventory::Inventory,
+};
 use rand::Rng;
 
 /// Put forward an amount of tokens to either lose or earn
@@ -9,8 +12,8 @@ pub async fn wager(
     amount: String,
     #[autocomplete = "super::autocomplete_inventory"]
     #[rest]
-    item: Option<String>) -> Result<(), Error>
-{
+    item: Option<String>,
+) -> Result<(), Error> {
     let mut tx = ctx.data().database.begin().await?;
     let mut balance = super::get_balance(ctx.author().id, &mut *tx).await?;
 
@@ -22,7 +25,8 @@ pub async fn wager(
                 let percent: f64 = match input[..input.len() - 1].parse::<f64>() {
                     Ok(x) => x,
                     Err(_) => {
-                        ctx.reply(format!("{input} is not a valid percent.")).await?;
+                        ctx.reply(format!("{input} is not a valid percent."))
+                            .await?;
                         return Ok(());
                     }
                 } / 100f64;
@@ -46,7 +50,10 @@ pub async fn wager(
     }
 
     if balance < amount {
-        ctx.reply(format!("You do not have enough tokens (**{balance}**) to wager this amount.")).await?;
+        ctx.reply(format!(
+            "You do not have enough tokens (**{balance}**) to wager this amount."
+        ))
+        .await?;
         return Ok(());
     }
 
@@ -58,7 +65,8 @@ pub async fn wager(
                 if let Some(item) = inventory.get_item_of_type(&mut *tx, item.id).await? {
                     inventory.remove_item(&mut *tx, item.id).await?;
                 } else {
-                    ctx.reply(format!("You do not have a(n) {} to use.", item.name)).await?;
+                    ctx.reply(format!("You do not have a(n) {} to use.", item.name))
+                        .await?;
                     return Ok(());
                 }
 
@@ -73,22 +81,32 @@ pub async fn wager(
         None
     };
 
-    let (multiplier, chance) = item.map(|item| item.effects.iter()
-        .fold((1.0, 0.5), |(m, c), effect| match effect {
-            Effect::Multiplier(m) => (*m, c),
-            Effect::Chance(c) => (m, *c),
+    let (multiplier, chance) = item
+        .map(|item| {
+            item.effects
+                .iter()
+                .fold((1.0, 0.5), |(m, c), effect| match effect {
+                    Effect::Multiplier(m) => (*m, c),
+                    Effect::Chance(c) => (m, *c),
+                })
         })
-    ).unwrap_or((1.0, 0.5));
+        .unwrap_or((1.0, 0.5));
 
     if rand::thread_rng().gen_bool(chance) {
         let win = (amount as f64 * multiplier) as i32;
         balance += win;
-        ctx.reply(format!("You just gained **{}** token(s)! You now have **{}**.",
-                          win, balance)).await?;
+        ctx.reply(format!(
+            "You just gained **{}** token(s)! You now have **{}**.",
+            win, balance
+        ))
+        .await?;
     } else {
         balance -= amount;
-        ctx.reply(format!("You've lost **{}** token(s), you now have **{}**.",
-                          amount, balance)).await?;
+        ctx.reply(format!(
+            "You've lost **{}** token(s), you now have **{}**.",
+            amount, balance
+        ))
+        .await?;
     }
 
     super::change_balance(ctx.author().id, balance, &mut *tx).await?;

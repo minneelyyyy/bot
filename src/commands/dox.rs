@@ -6,11 +6,12 @@ use serenity::Colour;
 // this code uses Member::permissions, which while it is a deprecated function, it doesn't actually matter
 // since it is only used to display information to the user.
 #[allow(deprecated)]
-fn get_dox_output(ctx: &mut Context<'_>,
-                  user: &serenity::User,
-                  member: Option<&serenity::Member>,
-                  show_permissions: bool) -> String
-{
+fn get_dox_output(
+    ctx: &mut Context<'_>,
+    user: &serenity::User,
+    member: Option<&serenity::Member>,
+    show_permissions: bool,
+) -> String {
     let mut output = String::new();
 
     if user.bot {
@@ -34,13 +35,19 @@ fn get_dox_output(ctx: &mut Context<'_>,
     }
 
     if let Some(Some(premium_since)) = member.as_ref().map(|m| m.premium_since) {
-        output.push_str(
-            &format!("**Boosting this Server**: Yes\n**Boosting since**: {premium_since}\n"));
+        output.push_str(&format!(
+            "**Boosting this Server**: Yes\n**Boosting since**: {premium_since}\n"
+        ));
     }
 
-    if let Some(Ok(permissions)) = member.map(|m| m.permissions(ctx)).filter(|_| show_permissions) {
-        output.push_str(&format!("**Permissions**: {}\n",
-                                 permissions.get_permission_names().join(", ")))
+    if let Some(Ok(permissions)) = member
+        .map(|m| m.permissions(ctx))
+        .filter(|_| show_permissions)
+    {
+        output.push_str(&format!(
+            "**Permissions**: {}\n",
+            permissions.get_permission_names().join(", ")
+        ))
     }
 
     output
@@ -48,13 +55,13 @@ fn get_dox_output(ctx: &mut Context<'_>,
 
 /// Display information about a given user
 #[poise::command(slash_command, prefix_command)]
-pub async fn dox(mut ctx: Context<'_>,
-                 #[description = "The user to display information of"]
-                 user: serenity::User,
-                 #[rename = "permissions"]
-                 #[description = "Rather or not to show the user's permissions"]
-                 show_permissions: Option<bool>) -> Result<(), Error>
-{
+pub async fn dox(
+    mut ctx: Context<'_>,
+    #[description = "The user to display information of"] user: serenity::User,
+    #[rename = "permissions"]
+    #[description = "Rather or not to show the user's permissions"]
+    show_permissions: Option<bool>,
+) -> Result<(), Error> {
     let user = ctx.http().get_user(user.id).await?;
     let member = if let Some(guild) = ctx.guild_id() {
         guild.member(ctx.http(), user.id).await.ok()
@@ -65,9 +72,17 @@ pub async fn dox(mut ctx: Context<'_>,
     let embed = serenity::CreateEmbed::default()
         .title(format!("Information about {}", user.name))
         .description(get_dox_output(
-            &mut ctx, &user, member.as_ref(), show_permissions.unwrap_or(false)))
-        .colour(member.and_then(|m| m.colour(ctx.cache()))
-            .unwrap_or(user.accent_colour.unwrap_or(Colour::from_rgb(255, 255, 255))))
+            &mut ctx,
+            &user,
+            member.as_ref(),
+            show_permissions.unwrap_or(false),
+        ))
+        .colour(
+            member.and_then(|m| m.colour(ctx.cache())).unwrap_or(
+                user.accent_colour
+                    .unwrap_or(Colour::from_rgb(255, 255, 255)),
+            ),
+        )
         .image(user.face());
 
     ctx.send(poise::CreateReply::default().embed(embed)).await?;

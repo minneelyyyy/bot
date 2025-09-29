@@ -1,7 +1,7 @@
 use crate::common::{Context, Error};
-use std::{cmp::Ordering, fmt::Display, time::Duration};
 use poise::serenity_prelude::{self as serenity, CreateInteractionResponseMessage};
 use rand::seq::SliceRandom;
+use std::{cmp::Ordering, fmt::Display, time::Duration};
 
 #[derive(Clone)]
 enum Suite {
@@ -13,18 +13,24 @@ enum Suite {
 
 impl Display for Suite {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            Self::Hearts => "\u{2665}",
-            Self::Diamonds => "\u{2666}",
-            Self::Clubs => "\u{2663}",
-            Self::Spades => "\u{2660}",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Hearts => "\u{2665}",
+                Self::Diamonds => "\u{2666}",
+                Self::Clubs => "\u{2663}",
+                Self::Spades => "\u{2660}",
+            }
+        )
     }
 }
 
 impl Suite {
     fn suites() -> impl Iterator<Item = Self> {
-        [Self::Hearts, Self::Diamonds, Self::Clubs, Self::Spades].iter().cloned()
+        [Self::Hearts, Self::Diamonds, Self::Clubs, Self::Spades]
+            .iter()
+            .cloned()
     }
 }
 
@@ -51,7 +57,8 @@ impl Display for Rank {
 
 impl Rank {
     fn ranks() -> impl Iterator<Item = Self> {
-        (2..=10).map(|n| Self::Pip(n))
+        (2..=10)
+            .map(|n| Self::Pip(n))
             .chain(vec![Self::Jack, Self::King, Self::Queen, Self::Ace])
     }
 
@@ -101,8 +108,7 @@ impl Card {
 
 /// Blackjack!
 #[poise::command(slash_command, prefix_command, aliases("jackblack", "bj", "21"))]
-pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
-{
+pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error> {
     let mut tx = ctx.data().database.begin().await?;
     let mut balance = super::get_balance(ctx.author().id, &mut *tx).await?;
 
@@ -117,7 +123,8 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
                 let percent: f64 = match input[..input.len() - 1].parse::<f64>() {
                     Ok(x) => x,
                     Err(_) => {
-                        ctx.reply(format!("{input} is not a valid percent.")).await?;
+                        ctx.reply(format!("{input} is not a valid percent."))
+                            .await?;
                         return Ok(());
                     }
                 } / 100f64;
@@ -141,12 +148,23 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
     }
 
     if balance < amount {
-        ctx.reply(format!("You do not have enough tokens (**{balance}**) to wager this amount.")).await?;
+        ctx.reply(format!(
+            "You do not have enough tokens (**{balance}**) to wager this amount."
+        ))
+        .await?;
         return Ok(());
     }
 
     let mut deck: Vec<_> = Card::deck()
-        .filter(|card| !matches!(card, Card { rank: Rank::Jack, .. }))
+        .filter(|card| {
+            !matches!(
+                card,
+                Card {
+                    rank: Rank::Jack,
+                    ..
+                }
+            )
+        })
         .collect();
 
     deck.shuffle(&mut rand::thread_rng());
@@ -157,25 +175,42 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
     let msg = ctx.reply("Just a second...").await?;
 
     loop {
-        let dealers_count = dealers_hand.iter().fold(0, |acc, card| acc + card.value(acc + 11 > 21));
-        let players_count = players_hand.iter().fold(0, |acc, card| acc + card.value(acc + 11 > 21));
+        let dealers_count = dealers_hand
+            .iter()
+            .fold(0, |acc, card| acc + card.value(acc + 11 > 21));
+        let players_count = players_hand
+            .iter()
+            .fold(0, |acc, card| acc + card.value(acc + 11 > 21));
 
         if players_count > 21 {
-            msg.edit(ctx, poise::CreateReply::default()
-                .components(vec![])
-                .content(format!(
-                    concat!(
-                        "**Dealer's hand**: {} ({})\n",
-                        "**Your hand**: {} ({})\n\n",
-                        "**Bet**: {}\n",
-                        "Bust! You've lost **{}** token(s)."
-                    ),
-                    dealers_hand.iter().map(|card| format!("`{card}`")).collect::<Vec<String>>().join(", "),
-                    dealers_count,
-                    players_hand.iter().map(|card| format!("`{card}`")).collect::<Vec<String>>().join(", "),
-                    players_count,
-                    amount, amount
-            ))).await?;
+            msg.edit(
+                ctx,
+                poise::CreateReply::default()
+                    .components(vec![])
+                    .content(format!(
+                        concat!(
+                            "**Dealer's hand**: {} ({})\n",
+                            "**Your hand**: {} ({})\n\n",
+                            "**Bet**: {}\n",
+                            "Bust! You've lost **{}** token(s)."
+                        ),
+                        dealers_hand
+                            .iter()
+                            .map(|card| format!("`{card}`"))
+                            .collect::<Vec<String>>()
+                            .join(", "),
+                        dealers_count,
+                        players_hand
+                            .iter()
+                            .map(|card| format!("`{card}`"))
+                            .collect::<Vec<String>>()
+                            .join(", "),
+                        players_count,
+                        amount,
+                        amount
+                    )),
+            )
+            .await?;
 
             balance -= amount;
             break;
@@ -192,22 +227,34 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
             ])];
 
             poise::CreateReply::default()
-                .content(
-                    format!(
-                        concat!(
-                            "**Dealer's hand**: {} ({})\n",
-                            "**Your hand**: {} ({})\n\n",
-                            "**Bet**: {}",
-                            "{}"
-                        ),
-                        format!("`{}`, `XX`", dealers_hand[0]),
-                        dealers_hand[0].value(matches!(dealers_hand[0], Card { rank: Rank::Ace, .. })),
-                        players_hand.iter().map(|card| format!("`{card}`")).collect::<Vec<String>>().join(", "),
-                        players_count,
-                        amount,
-                        if timeout { "\n*You have 60 seconds to make a decision.*" } else { "" }
-                    )
-                )
+                .content(format!(
+                    concat!(
+                        "**Dealer's hand**: {} ({})\n",
+                        "**Your hand**: {} ({})\n\n",
+                        "**Bet**: {}",
+                        "{}"
+                    ),
+                    format!("`{}`, `XX`", dealers_hand[0]),
+                    dealers_hand[0].value(matches!(
+                        dealers_hand[0],
+                        Card {
+                            rank: Rank::Ace,
+                            ..
+                        }
+                    )),
+                    players_hand
+                        .iter()
+                        .map(|card| format!("`{card}`"))
+                        .collect::<Vec<String>>()
+                        .join(", "),
+                    players_count,
+                    amount,
+                    if timeout {
+                        "\n*You have 60 seconds to make a decision.*"
+                    } else {
+                        ""
+                    }
+                ))
                 .components(components)
         };
 
@@ -215,43 +262,62 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
 
         let Some(mci) = serenity::ComponentInteractionCollector::new(ctx.serenity_context())
             .timeout(Duration::from_secs(60))
-            .filter(move |mci| mci.data.custom_id.starts_with("blackjack")).await else {
-                if timeout {
-                    msg.edit(ctx, poise::CreateReply::default()
+            .filter(move |mci| mci.data.custom_id.starts_with("blackjack"))
+            .await
+        else {
+            if timeout {
+                msg.edit(
+                    ctx,
+                    poise::CreateReply::default()
                         .components(vec![])
-                        .content(
+                        .content(format!(
+                            concat!(
+                                "**Dealer's hand**: {} ({})\n",
+                                "**Your hand**: {} ({})\n\n",
+                                "**Bet**: {}\n",
+                                "{}"
+                            ),
+                            dealers_hand
+                                .iter()
+                                .map(|card| format!("`{card}`"))
+                                .collect::<Vec<String>>()
+                                .join(", "),
+                            dealers_count,
+                            players_hand
+                                .iter()
+                                .map(|card| format!("`{card}`"))
+                                .collect::<Vec<String>>()
+                                .join(", "),
+                            players_count,
+                            amount,
                             format!(
-                                concat!(
-                                    "**Dealer's hand**: {} ({})\n",
-                                    "**Your hand**: {} ({})\n\n",
-                                    "**Bet**: {}\n",
-                                    "{}"
-                                ),
-                                dealers_hand.iter().map(|card| format!("`{card}`")).collect::<Vec<String>>().join(", "),
-                                dealers_count,
-                                players_hand.iter().map(|card| format!("`{card}`")).collect::<Vec<String>>().join(", "),
-                                players_count,
-                                amount, format!("No bets go without a game! You've lost **{amount}** token(s).")
+                                "No bets go without a game! You've lost **{amount}** token(s)."
                             )
-                        )).await?;
-    
-                    balance -= amount;
-                    super::change_balance(ctx.author().id, balance, &mut *tx).await?;
-                    tx.commit().await?;
-    
-                    return Ok(());
-                } else {
-                    timeout = true;
-                    continue;
-                }
+                        )),
+                )
+                .await?;
+
+                balance -= amount;
+                super::change_balance(ctx.author().id, balance, &mut *tx).await?;
+                tx.commit().await?;
+
+                return Ok(());
+            } else {
+                timeout = true;
+                continue;
+            }
         };
 
         if mci.member.clone().unwrap().user.id != ctx.author().id {
-            mci.create_response(ctx,
+            mci.create_response(
+                ctx,
                 serenity::CreateInteractionResponse::Message(
                     CreateInteractionResponseMessage::new()
                         .ephemeral(true)
-                        .content("You cannot interact with this message."))).await?;
+                        .content("You cannot interact with this message."),
+                ),
+            )
+            .await?;
 
             continue;
         }
@@ -259,14 +325,16 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
         // Reset timeout after player interacts
         timeout = false;
 
-        mci.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge).await?;
+        mci.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge)
+            .await?;
 
         match &mci.data.custom_id[..] {
             "blackjack_hit" => {
                 players_hand.push(deck.pop().unwrap());
             }
             "blackjack_hold" => {
-                let dealers_hand = dealers_hand.into_iter()
+                let dealers_hand = dealers_hand
+                    .into_iter()
                     .chain(deck.into_iter())
                     .scan(0u8, |acc, card| {
                         if *acc >= 17 {
@@ -275,9 +343,11 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
                             *acc += card.value(*acc + 11 > 21);
                             Some(card)
                         }
-                    }).collect::<Vec<_>>();
+                    })
+                    .collect::<Vec<_>>();
 
-                let dealers_count = dealers_hand.iter()
+                let dealers_count = dealers_hand
+                    .iter()
                     .fold(0, |acc, card| acc + card.value(acc + 11 > 21));
 
                 let s = match dealers_count.cmp(&players_count) {
@@ -285,7 +355,9 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
                         if players_count == 21 && players_hand.len() == 2 {
                             let amount = amount * 3 / 2;
                             balance += amount;
-                            format!("You've won with a Blackjack! You've gained **{amount}** token(s).")
+                            format!(
+                                "You've won with a Blackjack! You've gained **{amount}** token(s)."
+                            )
                         } else {
                             balance += amount;
                             format!("You've won! **{amount}** token(s) have been added to your account.")
@@ -295,7 +367,9 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
                         if players_count == 21 && players_hand.len() == 2 {
                             let amount = amount * 3 / 2;
                             balance += amount;
-                            format!("You've won with a Blackjack! You've gained **{amount}** token(s).")
+                            format!(
+                                "You've won with a Blackjack! You've gained **{amount}** token(s)."
+                            )
                         } else {
                             balance += amount;
                             format!("You've won! **{amount}** token(s) have been added to your account.")
@@ -313,23 +387,34 @@ pub async fn blackjack(ctx: Context<'_>, amount: String) -> Result<(), Error>
                 super::change_balance(ctx.author().id, balance, &mut *tx).await?;
                 tx.commit().await?;
 
-                msg.edit(ctx, poise::CreateReply::default()
-                    .components(vec![])
-                    .content(
-                        format!(
+                msg.edit(
+                    ctx,
+                    poise::CreateReply::default()
+                        .components(vec![])
+                        .content(format!(
                             concat!(
                                 "**Dealer's hand**: {} ({})\n",
                                 "**Your hand**: {} ({})\n\n",
                                 "**Bet**: {}\n",
                                 "{}"
                             ),
-                            dealers_hand.iter().map(|card| format!("`{card}`")).collect::<Vec<String>>().join(", "),
+                            dealers_hand
+                                .iter()
+                                .map(|card| format!("`{card}`"))
+                                .collect::<Vec<String>>()
+                                .join(", "),
                             dealers_count,
-                            players_hand.iter().map(|card| format!("`{card}`")).collect::<Vec<String>>().join(", "),
+                            players_hand
+                                .iter()
+                                .map(|card| format!("`{card}`"))
+                                .collect::<Vec<String>>()
+                                .join(", "),
                             players_count,
-                            amount, s
-                        )
-                    )).await?;
+                            amount,
+                            s
+                        )),
+                )
+                .await?;
 
                 return Ok(());
             }

@@ -1,4 +1,3 @@
-
 use crate::common::Error;
 
 use poise::serenity_prelude::{futures::Stream, UserId};
@@ -20,10 +19,7 @@ pub struct Inventory {
 
 impl Inventory {
     pub fn new(user: UserId, game: Option<u64>) -> Self {
-        Self {
-            user,
-            game,
-        }
+        Self { user, game }
     }
 
     pub async fn give_item<'a, E>(&self, db: E, item: Item) -> Result<(), Error>
@@ -34,15 +30,16 @@ impl Inventory {
             r#"
             INSERT INTO items (owner, game, item, data, name)
             VALUES ($1, $2, $3, $4, $5)
-            "#
+            "#,
         )
-            .bind(self.user.get() as i64)
-            .bind(self.game.unwrap() as i64)
-            .bind(item.item)
-            .bind(item.data)
-            .bind(item.name)
-            .execute(db).await?;
-    
+        .bind(self.user.get() as i64)
+        .bind(self.game.unwrap() as i64)
+        .bind(item.item)
+        .bind(item.data)
+        .bind(item.name)
+        .execute(db)
+        .await?;
+
         Ok(())
     }
 
@@ -54,8 +51,13 @@ impl Inventory {
             r#"
             SELECT id, name, game, item, data FROM items
             where item = $1 AND owner = $2
-            "#
-        ).bind(item as i64).bind(self.user.get() as i64).fetch_one(db).await.ok();
+            "#,
+        )
+        .bind(item as i64)
+        .bind(self.user.get() as i64)
+        .fetch_one(db)
+        .await
+        .ok();
 
         Ok(x)
     }
@@ -68,8 +70,13 @@ impl Inventory {
             r#"
             SELECT id, name, game, item, data FROM items
             where name = $1 AND user = $2
-            "#
-        ).bind(name).bind(self.user.get() as i64).fetch_one(db).await.ok();
+            "#,
+        )
+        .bind(name)
+        .bind(self.user.get() as i64)
+        .fetch_one(db)
+        .await
+        .ok();
 
         Ok(x)
     }
@@ -82,37 +89,40 @@ impl Inventory {
             r#"
             DELETE FROM items
             WHERE id = $1
-            "#
-        ).bind(item).execute(db).await?;
+            "#,
+        )
+        .bind(item)
+        .execute(db)
+        .await?;
 
         Ok(())
     }
 
-    pub async fn items<'a, E>(&self, db: E) -> impl Stream<Item = Result<Item, sqlx::Error>> + use<'a, E>
+    pub async fn items<'a, E>(
+        &self,
+        db: E,
+    ) -> impl Stream<Item = Result<Item, sqlx::Error>> + use<'a, E>
     where
         E: PgExecutor<'a> + 'a,
     {
         match self.game {
-            Some(game) =>
-            sqlx::query_as(
-                    r#"
+            Some(game) => sqlx::query_as(
+                r#"
                     SELECT id, name, game, item, data FROM items
                     WHERE owner = $1 AND game = $2
-                    "#
-                )
-                .bind(self.user.get() as i64)
-                .bind(game as i64)
-                .fetch(db),
-            None =>
-                sqlx::query_as(
-                    r#"
+                    "#,
+            )
+            .bind(self.user.get() as i64)
+            .bind(game as i64)
+            .fetch(db),
+            None => sqlx::query_as(
+                r#"
                     SELECT id, name, game, item, data FROM items
                     WHERE owner = $1
-                    "#
-                )
-                .bind(self.user.get() as i64)
-                .fetch(db)
+                    "#,
+            )
+            .bind(self.user.get() as i64)
+            .fetch(db),
         }
-
     }
 }

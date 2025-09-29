@@ -1,25 +1,31 @@
 use poise::Command;
 
-mod ping;
+mod administration;
 mod dox;
-mod yeehaw;
-mod gambling;
 mod eval;
+mod gambling;
+mod ping;
 pub mod self_roles;
 mod settings;
 mod version;
-mod administration;
+mod yeehaw;
 
-use crate::common::{Data, Error, Context};
+use crate::common::{Context, Data, Error};
 
 /// Display a help menu
 #[poise::command(prefix_command, slash_command)]
-async fn help(ctx: Context<'_>,
+async fn help(
+    ctx: Context<'_>,
     #[description = "Specific command to get help with"]
     #[rest]
-    command: Option<String>) -> Result<(), Error>
-{
-    poise::builtins::help(ctx, command.as_deref(), poise::builtins::HelpConfiguration::default()).await?;
+    command: Option<String>,
+) -> Result<(), Error> {
+    poise::builtins::help(
+        ctx,
+        command.as_deref(),
+        poise::builtins::HelpConfiguration::default(),
+    )
+    .await?;
     Ok(())
 }
 

@@ -1,7 +1,10 @@
 use crate::{Context, Error};
 
-use poise::serenity_prelude::{UserId, User};
-use sqlx::{types::chrono::{DateTime, Utc, TimeZone}, PgExecutor, Row};
+use poise::serenity_prelude::{User, UserId};
+use sqlx::{
+    types::chrono::{DateTime, TimeZone, Utc},
+    PgExecutor, Row,
+};
 
 use std::time::Duration;
 
@@ -9,9 +12,10 @@ async fn get_streak<'a, E>(db: E, user: UserId) -> Result<Option<i32>, Error>
 where
     E: PgExecutor<'a>,
 {
-    match sqlx::query(
-            "SELECT streak FROM dailies WHERE userid = $1"
-        ).bind(user.get() as i64).fetch_one(db).await
+    match sqlx::query("SELECT streak FROM dailies WHERE userid = $1")
+        .bind(user.get() as i64)
+        .fetch_one(db)
+        .await
     {
         Ok(row) => Ok(Some(row.get(0))),
         Err(sqlx::Error::RowNotFound) => Ok(None),
@@ -35,9 +39,10 @@ async fn get_last<'a, E>(db: E, user: UserId) -> Result<Option<DateTime<Utc>>, E
 where
     E: PgExecutor<'a>,
 {
-    match sqlx::query(
-            "SELECT last FROM dailies WHERE userid = $1"
-        ).bind(user.get() as i64).fetch_one(db).await
+    match sqlx::query("SELECT last FROM dailies WHERE userid = $1")
+        .bind(user.get() as i64)
+        .fetch_one(db)
+        .await
     {
         Ok(row) => Ok(Some(row.get(0))),
         Err(sqlx::Error::RowNotFound) => Ok(None),
@@ -66,7 +71,11 @@ pub async fn streak(ctx: Context<'_>, user: Option<User>) -> Result<(), Error> {
         None => (ctx.author().id, "You have".to_string()),
     };
 
-    ctx.reply(format!("{who} a daily streak of **{}**", get_streak(db, user).await?.unwrap_or(0))).await?;
+    ctx.reply(format!(
+        "{who} a daily streak of **{}**",
+        get_streak(db, user).await?.unwrap_or(0)
+    ))
+    .await?;
     Ok(())
 }
 
@@ -97,7 +106,8 @@ async fn do_claim(ctx: Context<'_>) -> Result<(), Error> {
             streak
         } else {
             if existed {
-                begin = "You have not redeemed your daily in time and your streak has been reset. ".to_string();
+                begin = "You have not redeemed your daily in time and your streak has been reset. "
+                    .to_string();
             }
 
             0
@@ -117,9 +127,16 @@ async fn do_claim(ctx: Context<'_>) -> Result<(), Error> {
 
         tx.commit().await?;
 
-        ctx.reply(format!("{begin}**{payout}** tokens were added to your balance.{end}")).await?;
+        ctx.reply(format!(
+            "{begin}**{payout}** tokens were added to your balance.{end}"
+        ))
+        .await?;
     } else {
-        ctx.reply(format!("Your next daily is not available! It will be available <t:{}:R>.", next_daily.timestamp())).await?;
+        ctx.reply(format!(
+            "Your next daily is not available! It will be available <t:{}:R>.",
+            next_daily.timestamp()
+        ))
+        .await?;
     }
 
     Ok(())

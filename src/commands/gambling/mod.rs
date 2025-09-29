@@ -1,15 +1,17 @@
-
 pub mod balance;
-pub mod give;
-pub mod wager;
+pub mod blackjack;
 pub mod daily;
+pub mod give;
 pub mod leaderboard;
 pub mod shop;
-pub mod blackjack;
+pub mod wager;
 
-use crate::{inventory::{self, Inventory}, common::{Context, Error}};
+use crate::{
+    common::{Context, Error},
+    inventory::{self, Inventory},
+};
 use poise::serenity_prelude::{self as serenity, futures::StreamExt, UserId};
-use sqlx::{Row, PgExecutor};
+use sqlx::{PgExecutor, Row};
 use std::collections::HashMap;
 
 #[derive(Clone)]
@@ -41,7 +43,7 @@ impl Item {
 const ID: u64 = 440;
 
 mod items {
-    use super::{Item, Effect};
+    use super::{Effect, Item};
 
     pub const DIRT: Item = Item {
         name: "Pile of Dirt",
@@ -66,7 +68,7 @@ mod items {
         match id {
             id::DIRT => Some(&DIRT),
             id::SAND => Some(&SAND),
-            _ => None
+            _ => None,
         }
     }
 
@@ -74,7 +76,7 @@ mod items {
         match name {
             "Pile of Dirt" => Some(&DIRT),
             "Pile of Sand" => Some(&SAND),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -85,7 +87,9 @@ where
 {
     let row = sqlx::query("SELECT balance FROM bank WHERE id = $1")
         .bind(id.get() as i64)
-        .fetch_one(db).await.ok();
+        .fetch_one(db)
+        .await
+        .ok();
 
     let balance = if let Some(row) = row {
         row.try_get("balance")?
@@ -109,25 +113,30 @@ where
 }
 
 async fn autocomplete_inventory<'a>(
-    ctx: Context<'a>, 
+    ctx: Context<'a>,
     partial: &'a str,
 ) -> impl Iterator<Item = serenity::AutocompleteChoice> + use<'a> {
     let db = &ctx.data().database;
 
     let inventory = Inventory::new(ctx.author().id, Some(ID))
-        .items(db).await
+        .items(db)
+        .await
         .fold(HashMap::<i64, usize>::new(), |mut acc, item| async {
             let item = item.unwrap();
             let x = acc.get(&item.item);
             acc.insert(item.item, x.map(|x| x + 1).unwrap_or(1));
             acc
-        }).await;
+        })
+        .await;
 
-    inventory.into_iter()
+    inventory
+        .into_iter()
         .map(|(id, count)| (items::get_item_by_id(id as u64).unwrap(), count))
         .filter(move |(item, _)| item.name.contains(partial))
-        .map(|(item, count)| serenity::AutocompleteChoice::new(
-            format!("{} - {} ({count}x)", item.desc, item.name),
-            item.name
-        ))
+        .map(|(item, count)| {
+            serenity::AutocompleteChoice::new(
+                format!("{} - {} ({count}x)", item.desc, item.name),
+                item.name,
+            )
+        })
 }
