@@ -54,7 +54,7 @@ pub async fn buy(
         return Ok(());
     }
 
-    if let Some((price, &ref item)) = ITEMS.get(item.as_str()) {
+    if let Some((price, item)) = ITEMS.get(item.as_str()) {
         let mut tx = ctx.data().database.begin().await?;
 
         let author = ctx.author();
@@ -75,7 +75,7 @@ pub async fn buy(
 
         for _ in 0..count {
             inventory
-                .give_item(&mut *tx, item.clone().inv_item())
+                .give_item(&mut *tx, (*item).clone().inv_item())
                 .await?;
         }
 
