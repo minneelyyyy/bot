@@ -1,6 +1,5 @@
 use crate::common::{Context, Error};
 use poise::serenity_prelude::UserId;
-use sqlx::Row;
 
 enum LeaderboardType {
     Tokens(usize),
@@ -12,20 +11,20 @@ async fn display_leaderboard(ctx: Context<'_>, t: LeaderboardType) -> Result<(),
 
     match t {
         LeaderboardType::Tokens(count) => {
-            let rows = sqlx::query(
+            let rows = sqlx::query!(
                 r#"
                 SELECT id, balance FROM bank
                 ORDER BY balance DESC
                 LIMIT $1
                 "#,
+                count as i32
             )
-            .bind(count as i32)
             .fetch_all(db)
             .await?;
 
             let users: Vec<(_, i32)> = rows
                 .iter()
-                .map(|row| (UserId::new(row.get::<i64, _>(0) as u64), row.get(1)))
+                .map(|row| (UserId::new(row.id as u64), row.balance.unwrap_or(100)))
                 .collect();
             let mut output = String::new();
 
@@ -37,20 +36,20 @@ async fn display_leaderboard(ctx: Context<'_>, t: LeaderboardType) -> Result<(),
             ctx.reply(format!("```\n{output}```")).await?;
         }
         LeaderboardType::Dailies(count) => {
-            let rows = sqlx::query(
+            let rows = sqlx::query!(
                 r#"
                 SELECT userid, streak FROM dailies
                 ORDER BY streak DESC
                 LIMIT $1
                 "#,
+                count as i32
             )
-            .bind(count as i32)
             .fetch_all(db)
             .await?;
 
             let users: Vec<(_, i32)> = rows
                 .iter()
-                .map(|row| (UserId::new(row.get::<i64, _>(0) as u64), row.get(1)))
+                .map(|row| (UserId::new(row.userid as u64), row.streak.unwrap_or(0)))
                 .collect();
             let mut output = String::new();
 

@@ -5,9 +5,9 @@ use poise::serenity_prelude as serenity;
 #[poise::command(slash_command, prefix_command, aliases("bal", "b"))]
 pub async fn balance(ctx: Context<'_>, user: Option<serenity::User>) -> Result<(), Error> {
     let user = user.as_ref().unwrap_or(ctx.author());
-    let db = &ctx.data().database;
+    let mut tx = ctx.data().database.begin().await?;
 
-    let wealth = super::get_balance(user.id, db).await?;
+    let wealth = super::get_balance(user.id, &mut tx).await?;
 
     common::no_ping_reply(
         &ctx,

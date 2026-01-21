@@ -9,11 +9,11 @@ use std::env;
 use std::sync::Arc;
 
 use clap::Parser;
-use poise::serenity_prelude::{self as serenity};
 use poise::PartialContext;
+use poise::serenity_prelude::{self as serenity};
 
-use sqlx::postgres::PgPoolOptions;
 use sqlx::Row;
+use sqlx::postgres::PgPoolOptions;
 
 #[derive(Parser, Debug)]
 struct BotArgs {
@@ -126,81 +126,7 @@ async fn main() -> Result<(), Error> {
                     .connect(&database_url)
                     .await?;
 
-                sqlx::query(
-                    r#"
-                    CREATE TABLE IF NOT EXISTS bank (
-                        id BIGINT PRIMARY KEY,
-                        balance INT
-                    )
-                    "#,
-                )
-                .execute(&database)
-                .await?;
-
-                sqlx::query(
-                    r#"
-                    CREATE TABLE IF NOT EXISTS selfroles (
-                        userid BIGINT NOT NULL,
-                        guildid BIGINT NOT NULL,
-                        roleid BIGINT,
-                        UNIQUE (userid, guildid)
-                    )
-                    "#,
-                )
-                .execute(&database)
-                .await?;
-
-                sqlx::query(
-                    r#"
-                    CREATE TABLE IF NOT EXISTS games (
-                        id BIGSERIAL PRIMARY KEY,
-                        name CHAR[255]
-                    )
-                    "#,
-                )
-                .execute(&database)
-                .await?;
-
-                sqlx::query(
-                    r#"
-                    CREATE TABLE IF NOT EXISTS items (
-                        id BIGSERIAL PRIMARY KEY,
-                        owner BIGINT NOT NULL,
-                        game BIGINT NOT NULL,
-                        item BIGINT NOT NULL,
-                        data JSON NOT NULL,
-                        name TEXT
-                    )
-                    "#,
-                )
-                .execute(&database)
-                .await?;
-
-                sqlx::query(
-                    r#"
-                    CREATE TABLE IF NOT EXISTS dailies (
-                        userid BIGINT NOT NULL PRIMARY KEY,
-                        last TIMESTAMPTZ,
-                        streak INT
-                    )
-                    "#,
-                )
-                .execute(&database)
-                .await?;
-
-                sqlx::query(
-                    r#"
-                    CREATE TABLE IF NOT EXISTS settings (
-                        guildid BIGINT NOT NULL PRIMARY KEY,
-                        positional_role BIGINT,
-                        banrole BIGINT,
-                        hoist_selfroles BOOLEAN,
-                        prefix TEXT
-                    )
-                    "#,
-                )
-                .execute(&database)
-                .await?;
+                sqlx::migrate!().run(&database).await?;
 
                 println!("Bot is ready!");
 

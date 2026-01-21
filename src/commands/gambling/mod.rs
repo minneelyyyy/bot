@@ -10,8 +10,8 @@ use crate::{
     common::{Context, Error},
     inventory::{self, Inventory},
 };
-use poise::serenity_prelude::{self as serenity, futures::StreamExt, UserId};
-use sqlx::{PgExecutor, Row};
+use poise::serenity_prelude::{self as serenity, UserId, futures::StreamExt};
+use sqlx::PgConnection;
 use std::collections::HashMap;
 
 #[derive(Clone)]
@@ -81,18 +81,14 @@ mod items {
     }
 }
 
-pub async fn get_balance<'a, E>(id: UserId, db: E) -> Result<i32, Error>
-where
-    E: PgExecutor<'a>,
-{
-    let row = sqlx::query("SELECT balance FROM bank WHERE id = $1")
-        .bind(id.get() as i64)
+pub async fn get_balance(id: UserId, db: &mut PgConnection) -> Result<i32, Error> {
+    let row = sqlx::query!("SELECT balance FROM bank WHERE id = $1", id.get() as i64)
         .fetch_one(db)
         .await
         .ok();
 
     let balance = if let Some(row) = row {
-        row.try_get("balance")?
+        row.balance.unwrap_or(100)
     } else {
         100
     };
@@ -100,14 +96,15 @@ where
     Ok(balance)
 }
 
-pub async fn change_balance<'a, E>(id: UserId, balance: i32, db: E) -> Result<(), Error>
-where
-    E: PgExecutor<'a>,
-{
-    sqlx::query("INSERT INTO bank (id, balance) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET balance = EXCLUDED.balance")
-        .bind(id.get() as i64)
-        .bind(balance)
-        .execute(db).await?;
+pub async fn change_balance(id: UserId, balance: i32, db: &mut PgConnection) -> Result<(), Error> {
+    sqlx::query!(
+        r#"INSERT INTO bank (id, balance) VALUES ($1, $2)
+        ON CONFLICT (id) DO UPDATE SET balance = EXCLUDED.balance"#,
+        id.get() as i64,
+        balance
+    )
+    .execute(db)
+    .await?;
 
     Ok(())
 }
