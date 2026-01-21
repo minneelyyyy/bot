@@ -1,6 +1,6 @@
 use crate::common::{Context, Error};
 use poise::serenity_prelude::{EditRole, GuildId, Permissions, RoleId, UserId};
-use sqlx::{PgConnection, Row};
+use sqlx::PgConnection;
 
 pub mod color;
 mod disown;
