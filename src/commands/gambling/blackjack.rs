@@ -3,7 +3,7 @@ use poise::serenity_prelude::{self as serenity, CreateInteractionResponseMessage
 use rand::seq::SliceRandom;
 use std::{cmp::Ordering, fmt::Display, time::Duration};
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 enum Suite {
     Hearts,
     Diamonds,
@@ -34,7 +34,7 @@ impl Suite {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 enum Rank {
     Pip(u8),
     Jack,
@@ -90,15 +90,10 @@ impl Card {
     }
 
     fn deck() -> impl Iterator<Item = Card> {
-        let mut deck = vec![];
-
-        for rank in Rank::ranks() {
-            for suite in Suite::suites() {
-                deck.push(Card::new(suite, rank.clone()));
-            }
-        }
-
-        deck.into_iter()
+        Suite::suites()
+            .map(|suite| Rank::ranks()
+                .map(move |rank| Card::new(suite, rank)))
+                .flatten()
     }
 
     fn value(&self, ace_would_bust: bool) -> u8 {
